@@ -42,7 +42,7 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- KAD 1: Login Form (Auto sorok bila login sah) -->
+        <!-- KAD LOGIN -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardLogin"
             android:layout_width="match_parent"
@@ -95,7 +95,7 @@
                         android:id="@+id/etPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Kata Laluan"
+                        android:hint="Kata Laluan Web UI"
                         android:text="admin"
                         android:textColor="#FFFFFF"
                         android:inputType="textPassword" />
@@ -119,7 +119,7 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- KAD 2: Telco & Diagnostik Signal RF -->
+            <!-- KAD 1: Telco & Diagnostik Signal RF -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -146,7 +146,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Mencari Telco..."
+                            android:text="Digi"
                             android:textColor="#58A6FF"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -171,7 +171,7 @@
                         android:layout_height="8dp"
                         android:layout_marginTop="10dp"
                         android:max="5"
-                        android:progress="0"
+                        android:progress="3"
                         android:progressTint="#3FB950" />
 
                     <View
@@ -180,7 +180,6 @@
                         android:background="#21262D"
                         android:layout_marginVertical="10dp" />
 
-                    <!-- Maklumat Radio Frequency (RF) mentah -->
                     <GridLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -194,6 +193,85 @@
                         <TextView android:id="@+id/tvCellId" android:layout_width="0dp" android:layout_columnWeight="1" android:text="Cell ID: --" android:textColor="#58A6FF" android:textSize="12sp"/>
                         <TextView android:id="@+id/tvWanIp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="WAN: --" android:textColor="#8B949E" android:textSize="12sp"/>
                     </GridLayout>
+
+                    <!-- Butang Signal Hunter Live -->
+                    <Button
+                        android:id="@+id/btnSignalHunter"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Mula Signal Hunter (Live)"
+                        android:textSize="12sp"
+                        android:backgroundTint="#21262D"
+                        android:textColor="#3FB950"
+                        app:cornerRadius="8dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 2: Kawalan Data Selular & Tukar IP -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kawalan Sambungan Internet"
+                        android:textColor="#F0F6FC"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="10dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3">
+
+                        <Button
+                            android:id="@+id/btnDataOn"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Data ON"
+                            android:textSize="11sp"
+                            android:backgroundTint="#238636"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnDataOff"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="Data OFF"
+                            android:textSize="11sp"
+                            android:backgroundTint="#DA3633"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnResetIp"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="3dp"
+                            android:text="Tukar IP"
+                            android:textSize="11sp"
+                            android:backgroundTint="#1F6FEB"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -255,7 +333,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 4: Kawalan Kunci Rangkaian & Hotspot -->
+            <!-- KAD 4: Alatan Rangkaian & Kotak Alat (Toolbox) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -274,17 +352,19 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Kunci Mod Rangkaian"
+                        android:text="Kotak Alat &amp; Pengurusan"
                         android:textColor="#F0F6FC"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="10dp" />
 
+                    <!-- Kunci 4G / Auto -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:weightSum="2">
+                        android:weightSum="2"
+                        android:layout_marginBottom="8dp">
 
                         <Button
                             android:id="@+id/btnLock4G"
@@ -309,18 +389,13 @@
                             app:cornerRadius="8dp" />
                     </LinearLayout>
 
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="#21262D"
-                        android:layout_marginVertical="12dp" />
-
-                    <!-- Butang Tindakan Moden -->
+                    <!-- Baris 1: Peranti, SMS, USSD -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:weightSum="3">
+                        android:weightSum="3"
+                        android:layout_marginBottom="8dp">
 
                         <Button
                             android:id="@+id/btnClients"
@@ -350,7 +425,48 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="3dp"
-                            android:text="Dail USSD"
+                            android:text="USSD"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+
+                    <!-- Baris 2: Hantar SMS, Tukar Wi-Fi, Ping -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3">
+
+                        <Button
+                            android:id="@+id/btnSendSms"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Kirim SMS"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnWifiSettings"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="Wi-Fi"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnPing"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="3dp"
+                            android:text="Uji Ping"
                             android:textSize="11sp"
                             android:backgroundTint="#21262D"
                             app:cornerRadius="8dp" />
@@ -358,7 +474,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Bar Butang Bawah (Refresh & Reboot) -->
+            <!-- Bar Butang Refresh & Reboot -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -390,7 +506,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Log Sistem Kecil -->
+        <!-- Sistem Log -->
         <TextView
             android:id="@+id/tvLogs"
             android:layout_width="match_parent"
