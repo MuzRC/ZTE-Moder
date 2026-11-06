@@ -26,12 +26,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnCheckStatus: Button
     private lateinit var tvLogs: TextView
 
-    // Simpan cookie session dalam RAM supaya token login kekal hidup
+    // Simpan cookie session dalam RAM
     private val cookieStore = mutableMapOf<String, List<Cookie>>()
+
+    // User-agent browser telefon standard supaya tidak di-reject oleh modem ZTE
+    private val fakeUserAgent = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
     private val client by lazy {
         OkHttpClient.Builder()
-            .connectTimeout(6, TimeUnit.SECONDS)
-            .readTimeout(6, TimeUnit.SECONDS)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
             .cookieJar(object : CookieJar {
                 override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
                     cookieStore[url.host] = cookies
@@ -74,7 +80,7 @@ class MainActivity : AppCompatActivity() {
 
             val success = withContext(Dispatchers.IO) {
                 try {
-                    // Encode password guna Base64 NO_WRAP (tiada line break \n)
+                    // Encode password guna Base64 NO_WRAP (tiada baris baru \n)
                     val base64Pass = Base64.encodeToString(
                         plainPass.toByteArray(Charsets.UTF_8),
                         Base64.NO_WRAP
@@ -89,15 +95,20 @@ class MainActivity : AppCompatActivity() {
                     val request = Request.Builder()
                         .url(targetUrl)
                         .post(body)
+                        // Header wajib penyamaran browser dan elak keep-alive socket hang
+                        .header("User-Agent", fakeUserAgent)
                         .header("Referer", "$baseUrl/index.html")
+                        .header("Origin", baseUrl)
                         .header("X-Requested-With", "XMLHttpRequest")
+                        .header("Accept", "application/json, text/javascript, */*; q=0.01")
+                        .header("Connection", "close") 
                         .build()
 
                     val response = client.newCall(request).execute()
                     val resultString = response.body?.string().orEmpty()
                     logMessage("Jawapan Server: $resultString")
 
-                    // Modem ZTE pulangkan {"result":"0"} kalau login sah
+                    // Modem ZTE memulangkan result:0 jika berjaya
                     resultString.contains("\"result\":\"0\"") || resultString.contains("\"result\":0")
                 } catch (e: Exception) {
                     logMessage("Ralat Sambungan: ${e.localizedMessage}")
@@ -110,7 +121,7 @@ class MainActivity : AppCompatActivity() {
                 logMessage(">> LOGIN BERJAYA. Butang status aktif.")
                 btnCheckStatus.isEnabled = true
             } else {
-                logMessage(">> LOGIN GAGAL. Semak password atau pastikan tiada peranti lain tengah buka web UI modem.")
+                logMessage(">> LOGIN GAGAL. Semak password atau pastikan tiada browser lain aktif.")
             }
         }
     }
@@ -118,7 +129,6 @@ class MainActivity : AppCompatActivity() {
     private fun fetchModemStatus(gatewayIp: String) {
         lifecycleScope.launch {
             val baseUrl = "http://$gatewayIp"
-            // Ambil info network, signal bar, status cas & peratus bateri
             val query = "isTest=false&cmd=network_type,signalbar,battery_charging,battery_vol_percent,network_provider"
             val targetUrl = "$baseUrl/goform/goform_get_cmd_process?$query"
 
@@ -127,8 +137,11 @@ class MainActivity : AppCompatActivity() {
                     val request = Request.Builder()
                         .url(targetUrl)
                         .get()
+                        .header("User-Agent", fakeUserAgent)
                         .header("Referer", "$baseUrl/index.html")
+                        .header("Origin", baseUrl)
                         .header("X-Requested-With", "XMLHttpRequest")
+                        .header("Connection", "close")
                         .build()
 
                     val response = client.newCall(request).execute()
