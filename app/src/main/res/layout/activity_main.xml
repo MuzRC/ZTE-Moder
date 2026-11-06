@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Top Header Bar -->
+        <!-- Header Atas Bersama Badge LIVE / OFFLINE -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -30,7 +30,38 @@
                 android:letterSpacing="0.05"
                 android:textStyle="bold" />
 
+            <!-- Badge Live Sync -->
+            <LinearLayout
+                android:id="@+id/layoutLiveStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#161B22"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:layout_marginEnd="6dp"
+                android:visibility="gone">
+
+                <View
+                    android:id="@+id/viewLiveDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/dot_live"
+                    android:layout_marginEnd="5dp" />
+
+                <TextView
+                    android:id="@+id/tvLiveText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LIVE"
+                    android:textColor="#3FB950"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
             <TextView
+                android:id="@+id/tvDeviceTag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="#161B22"
@@ -119,7 +150,7 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- KAD 1: Telco & Diagnostik Signal RF -->
+            <!-- KAD 1: Signal & RF Metrics -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -146,7 +177,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Digi"
+                            android:text="Mencari Telco..."
                             android:textColor="#58A6FF"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -171,7 +202,7 @@
                         android:layout_height="8dp"
                         android:layout_marginTop="10dp"
                         android:max="5"
-                        android:progress="3"
+                        android:progress="0"
                         android:progressTint="#3FB950" />
 
                     <View
@@ -194,7 +225,6 @@
                         <TextView android:id="@+id/tvWanIp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="WAN: --" android:textColor="#8B949E" android:textSize="12sp"/>
                     </GridLayout>
 
-                    <!-- Butang Signal Hunter Live -->
                     <Button
                         android:id="@+id/btnSignalHunter"
                         android:layout_width="match_parent"
@@ -208,7 +238,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 2: Kawalan Data Selular & Tukar IP -->
+            <!-- KAD 2: Kawalan Data Selular & Reset IP -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -275,7 +305,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 3: Kaunter Kuota & Data Trafik -->
+            <!-- KAD 3: Kaunter Kuota & Trafik -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -333,7 +363,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 4: Alatan Rangkaian & Kotak Alat (Toolbox) -->
+            <!-- KAD 4: Kotak Alat & Pengurusan -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -358,7 +388,6 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="10dp" />
 
-                    <!-- Kunci 4G / Auto -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -389,7 +418,6 @@
                             app:cornerRadius="8dp" />
                     </LinearLayout>
 
-                    <!-- Baris 1: Peranti, SMS, USSD -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -431,7 +459,6 @@
                             app:cornerRadius="8dp" />
                     </LinearLayout>
 
-                    <!-- Baris 2: Hantar SMS, Tukar Wi-Fi, Ping -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -474,7 +501,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Bar Butang Refresh & Reboot -->
+            <!-- Butang Refresh & Reboot -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
