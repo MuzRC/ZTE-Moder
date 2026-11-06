@@ -1,6 +1,8 @@
-name: Build ZTE Moder APK
+name: Build ZTE Moder Signed APK
 
 on:
+  push:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -17,20 +19,29 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Pasang Gradle 8.7 terus di server supaya tak perlukan gradlew binary
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.7'
 
-      # Compile jadi debug APK
-      - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
+      # Decode keystore dari GitHub Secrets ke dalam folder app/
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/ztemoder.jks
 
-      # Upload fail APK yang siap untuk didownload
-      - name: Upload Debug APK
+      # Compile Release APK yang siap di-sign
+      - name: Build Signed APK
+        env:
+          KEYSTORE_FILE: "ztemoder.jks"
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle assembleRelease --stacktrace
+
+      # Upload fail Signed APK
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: ZTE-Moder-Debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: ZTE-Moder-Signed-APK
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 7
