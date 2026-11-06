@@ -412,11 +412,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showBandLockDialog() {
+        private fun showBandLockDialog() {
         val bands = arrayOf(
             "Semua Band (Auto Default)",
-            "Band 3 (1800 MHz - Digi/Celcom Utama)",
-            "Band 7 (2600 MHz - Terpantas / Bandar)",
+            "Band 3 (1800 MHz - CelcomDigi Utama)",
+            "Band 7 (2600 MHz - Bandar / Laju)",
             "Band 8 (900 MHz - Liputan Jauh)",
             "Band 1 (2100 MHz)"
         )
@@ -425,17 +425,38 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Kunci Band LTE")
             .setItems(bands) { _, which ->
+                val selectedName = bands[which]
                 val selectedCode = bandCodes[which]
+
                 lifecycleScope.launch {
-                    log("Mengunci modem ke ${bands[which]}...")
+                    log("Mengunci modem ke $selectedName...")
                     val ok = api.lockLteBand(selectedCode)
-                    log(if (ok) "Band LTE berjaya ditetapkan!" else "Gagal mengunci band pada firmware ini.")
+
+                    if (ok) {
+                        // Notifikasi Toast timbul di skrin
+                        Toast.makeText(
+                            this@MainActivity,
+                            "BUKTI: Berjaya kunci ke $selectedName!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        log(">> ARAHAN DITERIMA: Modem berjaya dikunci ke Band $selectedCode.")
+                    } else {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Gagal: Menara sekitar tiada frekuensi $selectedName.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        log(">> GAGAL: Modem menolak tetapan Band $selectedCode.")
+                    }
+
+                    delay(1500)
                     refreshAllData(isAuto = false)
                 }
             }
             .setNegativeButton("Batal", null)
             .show()
     }
+
 
     private fun triggerLoginProcess(ip: String, pass: String) {
         api.gatewayIp = ip
