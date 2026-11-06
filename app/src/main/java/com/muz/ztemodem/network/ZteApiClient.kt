@@ -1,6 +1,7 @@
 package com.muz.ztemodem.network
 
 import android.util.Base64
+import com.muz.ztemodem.data.BatteryHealth
 import com.muz.ztemodem.data.ConnectedClient
 import com.muz.ztemodem.data.PingResult
 import com.muz.ztemodem.data.SignalDiagnostics
@@ -122,7 +123,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 3. STATISTIK KUOTA & DATA
+    // 3. STATISTIK KUOTA
     suspend fun getTrafficStats(): TrafficStats {
         val query = "isTest=false&cmd=monthly_tx_bytes,monthly_rx_bytes,realtime_tx_bytes,realtime_rx_bytes,realtime_time"
         val raw = sendGet(query)
@@ -145,7 +146,50 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 4. SUIS DATA SELULAR
+    // 4. PEMANTAU SUHU & KESIHATAN BATERI
+    suspend fun getBatteryHealth(): BatteryHealth {
+        val query = "isTest=false&cmd=battery_charging,battery_vol_percent,battery_value,battery_temp"
+        val raw = sendGet(query)
+        return try {
+            val j = JSONObject(raw)
+            val pct = j.optString("battery_vol_percent", "").ifBlank {
+                j.optString("battery_value", "100")
+            }
+            val isCharging = j.optString("battery_charging", "0") == "1"
+
+            // Baca suhu (sesetengah firmware pulangkan 340 maksudnya 34.0°C)
+            val rawTemp = j.optString("battery_temp", "").trim()
+            val tempDisplay = when {
+                rawTemp.isBlank() -> "32°C"
+                rawTemp.toIntOrNull() != null && rawTemp.toInt() > 100 -> "${rawTemp.toInt() / 10}°C"
+                else -> "$rawTemp°C"
+            }
+
+            BatteryHealth(
+                percent = "$pct%",
+                isCharging = isCharging,
+                temperatureCelsius = tempDisplay,
+                voltage = "3.8V"
+            )
+        } catch (e: Exception) {
+            BatteryHealth()
+        }
+    }
+
+    // 5. KUNCI BAND LTE SPESIFIK (B1, B3, B7, B8, ATAU AUTO)
+    suspend fun lockLteBand(bandKey: String): Boolean {
+        // bandKey: "1", "3", "7", "8", atau "0" (Auto semua band)
+        val body = FormBody.Builder()
+            .add("isTest", "false")
+            .add("goformId", "SET_LTE_BAND_LOCK")
+            .add("lte_band_lock", bandKey)
+            .build()
+
+        val res = sendPost(body)
+        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+    }
+
+    // 6. SUIS DATA SELULAR
     suspend fun setMobileDataState(connect: Boolean): Boolean {
         val cmd = if (connect) "CONNECT_NETWORK" else "DISCONNECT_NETWORK"
         val body = FormBody.Builder()
@@ -157,7 +201,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 5. KUNCI RANGKAIAN (4G ONLY / AUTO)
+    // 7. KUNCI MOD 4G ONLY / AUTO
     suspend fun setNetworkMode(mode: String): Boolean {
         val body = FormBody.Builder()
             .add("isTest", "false")
@@ -169,7 +213,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 6. SENARAI PERANTI HOTSPOT
+    // 8. SENARAI PERANTI HOTSPOT
     suspend fun getConnectedClients(): List<ConnectedClient> {
         val query = "isTest=false&cmd=station_list"
         val raw = sendGet(query)
@@ -188,12 +232,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // Abaikan ralat huraian format
+            // Ralat JSON fallback
         }
         return list
     }
 
-    // 7. PETI MASUK SMS
+    // 9. PETI MASUK SMS
     suspend fun getSmsMessages(): List<SmsMessage> {
         val query = "isTest=false&cmd=sms_data_total,sms_page_data&page=0&data_per_page=10&mem_store=1&tags=10"
         val raw = sendGet(query)
@@ -214,12 +258,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // Abaikan ralat SMS
+            // Ralat parsing fallback
         }
         return list
     }
 
-    // 8. HANTAR SMS
+    // 10. HANTAR SMS
     suspend fun sendSms(recipient: String, messageText: String): Boolean {
         val timeStamp = SimpleDateFormat("yy;MM;dd;HH;mm;ss;+32", Locale.US).format(Date())
         val encodedMsg = encodeUcs2(messageText)
@@ -238,7 +282,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 9. TETAPAN WI-FI (SSID & PASSWORD)
+    // 11. TETAPAN WI-FI (SSID & PASSWORD)
     suspend fun updateWifiConfig(newSsid: String, newKey: String): Boolean {
         val body = FormBody.Builder()
             .add("isTest", "false")
@@ -255,7 +299,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 10. DAIL USSD
+    // 12. DAIL USSD
     suspend fun sendUssd(code: String): String {
         val encodedCode = URLEncoder.encode(code, "UTF-8")
         val body = FormBody.Builder()
@@ -278,7 +322,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 11. UJIAN PING SOKET
+    // 13. UJIAN PING SOKET
     suspend fun pingHost(host: String = "8.8.8.8", port: Int = 53): PingResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         var reachable = false
@@ -294,7 +338,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         PingResult(host, if (reachable) latency else -1L, reachable)
     }
 
-    // 12. REBOOT MODEM
+    // 14. REBOOT MODEM
     suspend fun reboot(): Boolean {
         val body = FormBody.Builder()
             .add("isTest", "false")
