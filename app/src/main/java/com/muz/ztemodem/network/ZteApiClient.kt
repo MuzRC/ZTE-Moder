@@ -98,18 +98,29 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
     }
 
     // 2. DIAGNOSTIK SIGNAL RF LENGKAP
-    suspend fun getSignalDiagnostics(): SignalDiagnostics {
-        val query = "isTest=false&cmd=network_type,signalbar,network_provider,lte_rsrp,lte_rsrq,lte_rssi,lte_snr,cell_id,wan_ipaddr"
+        suspend fun getSignalDiagnostics(): SignalDiagnostics {
+        // Tambah arahan tarik lte_band dari modem
+        val query = "isTest=false&cmd=network_type,signalbar,network_provider,lte_band,lte_rsrp,lte_rsrq,lte_rssi,lte_snr,cell_id,wan_ipaddr"
         val raw = sendGet(query)
         if (raw.isBlank() || raw.startsWith("ERROR")) {
             return SignalDiagnostics(isReachable = false)
         }
         return try {
             val j = JSONObject(raw)
+
+            // Bersihkan nama telco supaya tiada simbol pelik macam tadi
+            val rawProvider = j.optString("network_provider", "Tiada Rangkaian")
+            val cleanProvider = rawProvider.replace(Regex("[^A-Za-z0-9 _-]"), "").trim()
+            val finalProvider = if (cleanProvider.isNotBlank()) cleanProvider else "CelcomDigi"
+
+            // Ekstrak nombor band (cth: "3" atau "BAND 3")
+            val rawBand = j.optString("lte_band", "").replace(Regex("[^0-9]"), "").trim()
+
             SignalDiagnostics(
                 isReachable = true,
-                provider = j.optString("network_provider", "Tiada Rangkaian"),
+                provider = finalProvider,
                 networkType = j.optString("network_type", "Tiada"),
+                lteBand = rawBand,
                 signalBar = j.optString("signalbar", "0").toIntOrNull() ?: 0,
                 rsrp = j.optString("lte_rsrp", "-").ifBlank { "-" },
                 rsrq = j.optString("lte_rsrq", "-").ifBlank { "-" },
