@@ -30,8 +30,8 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
     private val cookieStore = mutableMapOf<String, List<Cookie>>()
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(5, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .cookieJar(object : CookieJar {
             override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
@@ -100,9 +100,13 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
     suspend fun getSignalDiagnostics(): SignalDiagnostics {
         val query = "isTest=false&cmd=network_type,signalbar,network_provider,lte_rsrp,lte_rsrq,lte_rssi,lte_snr,cell_id,wan_ipaddr"
         val raw = sendGet(query)
+        if (raw.isBlank() || raw.startsWith("ERROR")) {
+            return SignalDiagnostics(isReachable = false)
+        }
         return try {
             val j = JSONObject(raw)
             SignalDiagnostics(
+                isReachable = true,
                 provider = j.optString("network_provider", "Tiada Rangkaian"),
                 networkType = j.optString("network_type", "Tiada"),
                 signalBar = j.optString("signalbar", "0").toIntOrNull() ?: 0,
@@ -114,7 +118,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 wanIp = j.optString("wan_ipaddr", "-").ifBlank { "-" }
             )
         } catch (e: Exception) {
-            SignalDiagnostics()
+            SignalDiagnostics(isReachable = false)
         }
     }
 
@@ -141,7 +145,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 4. SUIS DATA MUDAH ALIH (CONNECT / DISCONNECT)
+    // 4. SUIS DATA SELULAR
     suspend fun setMobileDataState(connect: Boolean): Boolean {
         val cmd = if (connect) "CONNECT_NETWORK" else "DISCONNECT_NETWORK"
         val body = FormBody.Builder()
@@ -184,7 +188,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // fallback JSON format lama
+            // Abaikan ralat huraian format
         }
         return list
     }
@@ -210,12 +214,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // parsing error fallback
+            // Abaikan ralat SMS
         }
         return list
     }
 
-    // 8. HANTAR SMS (UNICODE / UCS2)
+    // 8. HANTAR SMS
     suspend fun sendSms(recipient: String, messageText: String): Boolean {
         val timeStamp = SimpleDateFormat("yy;MM;dd;HH;mm;ss;+32", Locale.US).format(Date())
         val encodedMsg = encodeUcs2(messageText)
@@ -274,7 +278,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 11. UJIAN PING LATENCY SOKET
+    // 11. UJIAN PING SOKET
     suspend fun pingHost(host: String = "8.8.8.8", port: Int = 53): PingResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         var reachable = false
@@ -305,7 +309,6 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // Encoder UCS2 Hex
     private fun encodeUcs2(src: String): String {
         val sb = StringBuilder()
         for (c in src) {
@@ -314,7 +317,6 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return sb.toString()
     }
 
-    // Decoder UCS2 Hex
     private fun decodeUcs2(src: String): String {
         if (src.length % 4 != 0) return src
         return try {
