@@ -1,6 +1,6 @@
 package com.muz.ztemodem.data
 
-// Status sambungan dashboard
+// Status sambungan rangkaian dashboard
 enum class ModemConnectionState {
     LIVE,
     NO_SERVICE,
@@ -21,7 +21,7 @@ data class SignalDiagnostics(
     val wanIp: String = "-"
 )
 
-// Model statistik data dan kuota bulanan
+// Model statistik penggunaan data
 data class TrafficStats(
     val monthlyTotalBytes: Long = 0L,
     val realtimeRxBytes: Long = 0L,
@@ -45,14 +45,37 @@ data class TrafficStats(
     }
 }
 
-// Model peranti yang bersambung ke Wi-Fi
+// Model kiraan speedometer masa nyata
+data class LiveSpeed(
+    val downloadSpeedBytesPerSec: Long = 0L,
+    val uploadSpeedBytesPerSec: Long = 0L
+) {
+    fun formatSpeed(bytesPerSec: Long): String {
+        val kb = bytesPerSec / 1024.0
+        return if (kb >= 1024.0) {
+            String.format("%.2f MB/s", kb / 1024.0)
+        } else {
+            String.format("%.1f KB/s", kb)
+        }
+    }
+}
+
+// Model info bateri & suhu
+data class BatteryHealth(
+    val percent: String = "--%",
+    val isCharging: Boolean = false,
+    val temperatureCelsius: String = "--°C",
+    val voltage: String = "-- V"
+)
+
+// Model peranti hotspot
 data class ConnectedClient(
     val ipAddress: String,
     val macAddress: String,
     val hostName: String
 )
 
-// Model mesej SMS
+// Model SMS
 data class SmsMessage(
     val id: String,
     val sender: String,
@@ -60,7 +83,7 @@ data class SmsMessage(
     val timestamp: String
 )
 
-// Model keputusan ujian ping latency
+// Model ujian ping
 data class PingResult(
     val target: String,
     val latencyMs: Long,
