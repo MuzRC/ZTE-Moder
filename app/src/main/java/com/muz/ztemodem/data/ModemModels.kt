@@ -1,6 +1,6 @@
 package com.muz.ztemodem.data
 
-// Model untuk bacaan Signal RF terperinci
+// Model diagnostik signal radio frequency (RF)
 data class SignalDiagnostics(
     val provider: String = "Tiada Servis",
     val networkType: String = "N/A",
@@ -13,7 +13,7 @@ data class SignalDiagnostics(
     val wanIp: String = "-"
 )
 
-// Model untuk kaunter kuota dan statistik data
+// Model statistik data dan kuota bulanan
 data class TrafficStats(
     val monthlyTotalBytes: Long = 0L,
     val realtimeRxBytes: Long = 0L,
@@ -37,17 +37,24 @@ data class TrafficStats(
     }
 }
 
-// Model peranti yang sedang tumpang Wi-Fi
+// Model peranti yang menyambung ke Wi-Fi
 data class ConnectedClient(
     val ipAddress: String,
     val macAddress: String,
     val hostName: String
 )
 
-// Model mesej SMS
+// Model SMS peti masuk
 data class SmsMessage(
     val id: String,
     val sender: String,
     val content: String,
     val timestamp: String
+)
+
+// Model keputusan ujian ping latency
+data class PingResult(
+    val target: String,
+    val latencyMs: Long,
+    val isSuccess: Boolean
 )
