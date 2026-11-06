@@ -1,8 +1,16 @@
 package com.muz.ztemodem.data
 
+// Status sambungan dashboard
+enum class ModemConnectionState {
+    LIVE,
+    NO_SERVICE,
+    OFFLINE
+}
+
 // Model diagnostik signal radio frequency (RF)
 data class SignalDiagnostics(
-    val provider: String = "Tiada Servis",
+    val isReachable: Boolean = false,
+    val provider: String = "Tiada Rangkaian",
     val networkType: String = "N/A",
     val signalBar: Int = 0,
     val rsrp: String = "-",
@@ -37,14 +45,14 @@ data class TrafficStats(
     }
 }
 
-// Model peranti yang menyambung ke Wi-Fi
+// Model peranti yang bersambung ke Wi-Fi
 data class ConnectedClient(
     val ipAddress: String,
     val macAddress: String,
     val hostName: String
 )
 
-// Model SMS peti masuk
+// Model mesej SMS
 data class SmsMessage(
     val id: String,
     val sender: String,
