@@ -12,6 +12,7 @@ data class SignalDiagnostics(
     val isReachable: Boolean = false,
     val provider: String = "Tiada Rangkaian",
     val networkType: String = "N/A",
+    val lteBand: String = "", // Bukti band aktif (cth: 3, 7, 8)
     val signalBar: Int = 0,
     val rsrp: String = "-",
     val rsrq: String = "-",
@@ -20,6 +21,7 @@ data class SignalDiagnostics(
     val cellId: String = "-",
     val wanIp: String = "-"
 )
+
 
 // Model statistik penggunaan data
 data class TrafficStats(
