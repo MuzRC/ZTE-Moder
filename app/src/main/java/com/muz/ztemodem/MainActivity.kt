@@ -581,9 +581,13 @@ class MainActivity : AppCompatActivity() {
                 tvWanIp.text = "WAN: -"
                 tvDlSpeed.text = "0.0 KB/s"
                 tvUlSpeed.text = "0.0 KB/s"
-                if (!isAuto) log("Amaran: Sambungan ke gateway modem terputus.")
-                return@launch
+                            // Bukti visual: Kalau ada band dikesan, paparkan "LTE (B3)" atau "LTE (B8)"
+            if (sig.networkType.equals("LTE", ignoreCase = true) && sig.lteBand.isNotBlank()) {
+                tvNetworkType.text = "LTE (B${sig.lteBand})"
+            } else {
+                tvNetworkType.text = sig.networkType
             }
+
 
             val hasNoCellular = sig.signalBar == 0 ||
                     sig.provider.contains("Tiada", ignoreCase = true) ||
