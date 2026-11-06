@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Top App Bar -->
+        <!-- Top Header Bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -24,14 +24,13 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="ZTE MODER"
+                android:text="ZTE MODER PRO"
                 android:textColor="#58A6FF"
                 android:textSize="20sp"
                 android:letterSpacing="0.05"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvDeviceTag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="#161B22"
@@ -43,7 +42,7 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- KAD 1: Login Box (Boleh sorok lepas login) -->
+        <!-- KAD 1: Login Form (Auto sorok bila login sah) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardLogin"
             android:layout_width="match_parent"
@@ -63,7 +62,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Sambungan Gateway"
+                    android:text="Sambung Modem ZTE"
                     android:textColor="#F0F6FC"
                     android:textSize="14sp"
                     android:textStyle="bold"
@@ -80,10 +79,9 @@
                         android:id="@+id/etGatewayIp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="IP Modem"
+                        android:hint="Gateway IP"
                         android:text="192.168.0.1"
-                        android:textColor="#FFFFFF"
-                        android:textSize="14sp" />
+                        android:textColor="#FFFFFF" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -97,10 +95,9 @@
                         android:id="@+id/etPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Password Web UI"
+                        android:hint="Kata Laluan"
                         android:text="admin"
                         android:textColor="#FFFFFF"
-                        android:textSize="14sp"
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -108,13 +105,13 @@
                     android:id="@+id/btnLogin"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:text="Sambung ke Modem"
+                    android:text="Login"
                     android:textStyle="bold"
                     app:cornerRadius="10dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- DASHBOARD CONTAINER (Mula-mula disorok, keluar lepas login) -->
+        <!-- DASHBOARD CONTAINER -->
         <LinearLayout
             android:id="@+id/layoutDashboard"
             android:layout_width="match_parent"
@@ -122,7 +119,7 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <!-- KAD 2: Status Rangkaian & Telco -->
+            <!-- KAD 2: Telco & Diagnostik Signal RF -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -149,7 +146,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Mencari..."
+                            android:text="Mencari Telco..."
                             android:textColor="#58A6FF"
                             android:textSize="22sp"
                             android:textStyle="bold" />
@@ -161,40 +158,9 @@
                             android:background="#238636"
                             android:paddingHorizontal="10dp"
                             android:paddingVertical="4dp"
-                            android:text="4G LTE"
+                            android:text="LTE"
                             android:textColor="#FFFFFF"
                             android:textSize="12sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="#21262D"
-                        android:layout_marginVertical="12dp" />
-
-                    <!-- Bar Isyarat Signal -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Kekuatan Isyarat"
-                            android:textColor="#8B949E"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:id="@+id/tvSignalStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Bar 0 / 5"
-                            android:textColor="#3FB950"
-                            android:textSize="14sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
@@ -203,14 +169,93 @@
                         style="?android:attr/progressBarStyleHorizontal"
                         android:layout_width="match_parent"
                         android:layout_height="8dp"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="10dp"
                         android:max="5"
-                        android:progress="3"
+                        android:progress="0"
                         android:progressTint="#3FB950" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#21262D"
+                        android:layout_marginVertical="10dp" />
+
+                    <!-- Maklumat Radio Frequency (RF) mentah -->
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:rowCount="3">
+
+                        <TextView android:id="@+id/tvRsrp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSRP: -- dBm" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvRsrq" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSRQ: -- dB" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvRssi" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSSI: -- dBm" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvSinr" android:layout_width="0dp" android:layout_columnWeight="1" android:text="SINR: -- dB" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvCellId" android:layout_width="0dp" android:layout_columnWeight="1" android:text="Cell ID: --" android:textColor="#58A6FF" android:textSize="12sp"/>
+                        <TextView android:id="@+id/tvWanIp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="WAN: --" android:textColor="#8B949E" android:textSize="12sp"/>
+                    </GridLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 3: Info Bateri & Pengecasan -->
+            <!-- KAD 3: Kaunter Kuota & Data Trafik -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Penggunaan Kuota Bulanan"
+                        android:textColor="#8B949E"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvMonthlyData"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 MB"
+                        android:textColor="#FFFFFF"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:layout_marginVertical="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvLiveTraffic"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Sesi ini: DL -- | UL --"
+                            android:textColor="#8B949E"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tvUpTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Masa: 00j 00m"
+                            android:textColor="#58A6FF"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 4: Kawalan Kunci Rangkaian & Hotspot -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -226,60 +271,94 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kunci Mod Rangkaian"
+                        android:textColor="#F0F6FC"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="10dp" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:weightSum="2">
 
-                        <TextView
+                        <Button
+                            android:id="@+id/btnLock4G"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Status Bateri"
-                            android:textColor="#F0F6FC"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
+                            android:layout_marginEnd="4dp"
+                            android:text="Lock 4G Only"
+                            android:textSize="12sp"
+                            android:backgroundTint="#1F6FEB"
+                            app:cornerRadius="8dp" />
 
-                        <TextView
-                            android:id="@+id/tvChargingState"
-                            android:layout_width="wrap_content"
+                        <Button
+                            android:id="@+id/btnLockAuto"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="Tidak Mengecas"
-                            android:textColor="#8B949E"
-                            android:textSize="12sp" />
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="Mod Auto"
+                            android:textSize="12sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
                     </LinearLayout>
 
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#21262D"
+                        android:layout_marginVertical="12dp" />
+
+                    <!-- Butang Tindakan Moden -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="bottom"
-                        android:layout_marginTop="8dp">
+                        android:weightSum="3">
 
-                        <TextView
-                            android:id="@+id/tvBatteryPercent"
-                            android:layout_width="wrap_content"
+                        <Button
+                            android:id="@+id/btnClients"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="--%"
-                            android:textColor="#F0F6FC"
-                            android:textSize="26sp"
-                            android:textStyle="bold" />
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Peranti"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
 
-                        <TextView
-                            android:id="@+id/tvBatteryNote"
-                            android:layout_width="wrap_content"
+                        <Button
+                            android:id="@+id/btnSms"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_marginBottom="4dp"
-                            android:text="(Mod Bateri / Bypass)"
-                            android:textColor="#8B949E"
-                            android:textSize="12sp" />
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="Peti SMS"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnUssd"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="3dp"
+                            android:text="Dail USSD"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Butang Tindakan Pantas -->
+            <!-- Bar Butang Bawah (Refresh & Reboot) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -311,25 +390,16 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Bahagian Log Bawah (Kecil untuk rujukan) -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sistem Log:"
-            android:textColor="#6E7681"
-            android:textSize="11sp"
-            android:layout_marginBottom="4dp" />
-
+        <!-- Log Sistem Kecil -->
         <TextView
             android:id="@+id/tvLogs"
             android:layout_width="match_parent"
-            android:layout_height="80dp"
+            android:layout_height="65dp"
             android:background="#05070A"
             android:padding="8dp"
             android:textColor="#3FB950"
             android:fontFamily="monospace"
             android:textSize="10sp"
-            android:scrollbars="vertical"
             android:text="Sedia." />
 
     </LinearLayout>
