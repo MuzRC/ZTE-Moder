@@ -1,7 +1,11 @@
 package com.muz.ztemodem
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -12,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
+import com.muz.ztemodem.data.ModemConnectionState
 import com.muz.ztemodem.network.ZteApiClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,6 +38,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnRefresh: Button
     private lateinit var btnReboot: Button
     private lateinit var tvLogs: TextView
+
+    // Live Badge Views
+    private lateinit var layoutLiveStatus: View
+    private lateinit var viewLiveDot: View
+    private lateinit var tvLiveText: TextView
+    private var livePulseAnim: AlphaAnimation? = null
 
     // Signal Views
     private lateinit var tvTelcoName: TextView
@@ -83,6 +94,10 @@ class MainActivity : AppCompatActivity() {
         btnRefresh = findViewById(R.id.btnRefresh)
         btnReboot = findViewById(R.id.btnReboot)
         tvLogs = findViewById(R.id.tvLogs)
+
+        layoutLiveStatus = findViewById(R.id.layoutLiveStatus)
+        viewLiveDot = findViewById(R.id.viewLiveDot)
+        tvLiveText = findViewById(R.id.tvLiveText)
 
         tvTelcoName = findViewById(R.id.tvTelcoName)
         tvNetworkType = findViewById(R.id.tvNetworkType)
@@ -173,7 +188,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Mod Signal Hunter (Live Polling setiap 2 saat)
+        // Mod Signal Hunter
         btnSignalHunter.setOnClickListener {
             if (signalHunterJob?.isActive == true) {
                 signalHunterJob?.cancel()
@@ -391,6 +406,10 @@ class MainActivity : AppCompatActivity() {
     private fun stopAutoRefresh() {
         autoRefreshJob?.cancel()
         autoRefreshJob = null
+        runOnUiThread {
+            viewLiveDot.clearAnimation()
+            layoutLiveStatus.visibility = View.GONE
+        }
     }
 
     override fun onResume() {
@@ -405,11 +424,72 @@ class MainActivity : AppCompatActivity() {
         stopAutoRefresh()
     }
 
+    private fun updateSyncStatusUI(state: ModemConnectionState) {
+        runOnUiThread {
+            layoutLiveStatus.visibility = View.VISIBLE
+            when (state) {
+                ModemConnectionState.LIVE -> {
+                    viewLiveDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#3FB950"))
+                    tvLiveText.text = "LIVE"
+                    tvLiveText.setTextColor(Color.parseColor("#3FB950"))
+                    if (viewLiveDot.animation == null) {
+                        livePulseAnim = AlphaAnimation(0.2f, 1.0f).apply {
+                            duration = 650
+                            repeatMode = Animation.REVERSE
+                            repeatCount = Animation.INFINITE
+                        }
+                        viewLiveDot.startAnimation(livePulseAnim)
+                    }
+                }
+                ModemConnectionState.NO_SERVICE -> {
+                    viewLiveDot.clearAnimation()
+                    viewLiveDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#D29922"))
+                    tvLiveText.text = "NO SERVICE"
+                    tvLiveText.setTextColor(Color.parseColor("#D29922"))
+                    pbSignal.progress = 0
+                    pbSignal.progressTintList = ColorStateList.valueOf(Color.parseColor("#D29922"))
+                }
+                ModemConnectionState.OFFLINE -> {
+                    viewLiveDot.clearAnimation()
+                    viewLiveDot.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#DA3633"))
+                    tvLiveText.text = "OFFLINE"
+                    tvLiveText.setTextColor(Color.parseColor("#DA3633"))
+                    pbSignal.progress = 0
+                    pbSignal.progressTintList = ColorStateList.valueOf(Color.parseColor("#DA3633"))
+                }
+            }
+        }
+    }
+
     private fun refreshAllData(isAuto: Boolean = false) {
         lifecycleScope.launch {
             val sig = api.getSignalDiagnostics()
-            tvTelcoName.text = sig.provider
-            tvNetworkType.text = sig.networkType
+
+            if (!sig.isReachable) {
+                updateSyncStatusUI(ModemConnectionState.OFFLINE)
+                tvTelcoName.text = "Modem Terputus"
+                tvNetworkType.text = "OFFLINE"
+                tvWanIp.text = "WAN: -"
+                if (!isAuto) log("Amaran: Sambungan ke gateway modem terputus.")
+                return@launch
+            }
+
+            val hasNoCellular = sig.signalBar == 0 ||
+                    sig.provider.contains("Tiada", ignoreCase = true) ||
+                    sig.networkType.contains("NONE", ignoreCase = true) ||
+                    sig.networkType.contains("NO_SERVICE", ignoreCase = true)
+
+            if (hasNoCellular) {
+                updateSyncStatusUI(ModemConnectionState.NO_SERVICE)
+                tvTelcoName.text = "Tiada Servis"
+                tvNetworkType.text = "NO SERVICE"
+            } else {
+                updateSyncStatusUI(ModemConnectionState.LIVE)
+                tvTelcoName.text = sig.provider
+                tvNetworkType.text = sig.networkType
+                pbSignal.progressTintList = ColorStateList.valueOf(Color.parseColor("#3FB950"))
+            }
+
             pbSignal.progress = sig.signalBar
             tvRsrp.text = "RSRP: ${sig.rsrp} dBm"
             tvRsrq.text = "RSRQ: ${sig.rsrq} dB"
