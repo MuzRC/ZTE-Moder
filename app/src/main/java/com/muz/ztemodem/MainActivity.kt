@@ -1,5 +1,6 @@
 package com.muz.ztemodem
 
+import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
@@ -7,6 +8,7 @@ import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -16,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
+import com.muz.ztemodem.data.LiveSpeed
 import com.muz.ztemodem.data.ModemConnectionState
 import com.muz.ztemodem.network.ZteApiClient
 import kotlinx.coroutines.Job
@@ -29,11 +32,17 @@ class MainActivity : AppCompatActivity() {
     private var autoRefreshJob: Job? = null
     private var signalHunterJob: Job? = null
 
+    // Pembolehubah Pengiraan Speedometer
+    private var lastRxBytes: Long = 0L
+    private var lastTxBytes: Long = 0L
+    private var lastSpeedCalcTime: Long = 0L
+
     // Views
     private lateinit var cardLogin: MaterialCardView
     private lateinit var layoutDashboard: View
     private lateinit var etGatewayIp: TextInputEditText
     private lateinit var etPassword: TextInputEditText
+    private lateinit var cbAutoLogin: CheckBox
     private lateinit var btnLogin: Button
     private lateinit var btnRefresh: Button
     private lateinit var btnReboot: Button
@@ -57,6 +66,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvWanIp: TextView
     private lateinit var btnSignalHunter: Button
 
+    // Speedometer Views
+    private lateinit var tvDlSpeed: TextView
+    private lateinit var tvUlSpeed: TextView
+
+    // Battery & Temp Views
+    private lateinit var tvBatteryState: TextView
+    private lateinit var tvChargingNote: TextView
+    private lateinit var tvModemTemp: TextView
+
     // Data Switch
     private lateinit var btnDataOn: Button
     private lateinit var btnDataOff: Button
@@ -68,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvUpTime: TextView
 
     // Toolbox Buttons
+    private lateinit var btnLockBand: Button
     private lateinit var btnLock4G: Button
     private lateinit var btnLockAuto: Button
     private lateinit var btnClients: Button
@@ -83,6 +102,7 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         setupListeners()
+        loadSavedCredentialsAndAutoLogin()
     }
 
     private fun initViews() {
@@ -90,6 +110,7 @@ class MainActivity : AppCompatActivity() {
         layoutDashboard = findViewById(R.id.layoutDashboard)
         etGatewayIp = findViewById(R.id.etGatewayIp)
         etPassword = findViewById(R.id.etPassword)
+        cbAutoLogin = findViewById(R.id.cbAutoLogin)
         btnLogin = findViewById(R.id.btnLogin)
         btnRefresh = findViewById(R.id.btnRefresh)
         btnReboot = findViewById(R.id.btnReboot)
@@ -110,6 +131,13 @@ class MainActivity : AppCompatActivity() {
         tvWanIp = findViewById(R.id.tvWanIp)
         btnSignalHunter = findViewById(R.id.btnSignalHunter)
 
+        tvDlSpeed = findViewById(R.id.tvDlSpeed)
+        tvUlSpeed = findViewById(R.id.tvUlSpeed)
+
+        tvBatteryState = findViewById(R.id.tvBatteryState)
+        tvChargingNote = findViewById(R.id.tvChargingNote)
+        tvModemTemp = findViewById(R.id.tvModemTemp)
+
         btnDataOn = findViewById(R.id.btnDataOn)
         btnDataOff = findViewById(R.id.btnDataOff)
         btnResetIp = findViewById(R.id.btnResetIp)
@@ -118,6 +146,7 @@ class MainActivity : AppCompatActivity() {
         tvLiveTraffic = findViewById(R.id.tvLiveTraffic)
         tvUpTime = findViewById(R.id.tvUpTime)
 
+        btnLockBand = findViewById(R.id.btnLockBand)
         btnLock4G = findViewById(R.id.btnLock4G)
         btnLockAuto = findViewById(R.id.btnLockAuto)
         btnClients = findViewById(R.id.btnClients)
@@ -132,27 +161,17 @@ class MainActivity : AppCompatActivity() {
         btnLogin.setOnClickListener {
             val ip = etGatewayIp.text.toString().trim()
             val pass = etPassword.text.toString().trim()
-            api.gatewayIp = ip
-            log("Menghubungi modem di $ip...")
-
-            lifecycleScope.launch {
-                btnLogin.isEnabled = false
-                val success = api.login(pass)
-                btnLogin.isEnabled = true
-                if (success) {
-                    log("Login Berjaya! Membuka Dashboard...")
-                    cardLogin.visibility = View.GONE
-                    layoutDashboard.visibility = View.VISIBLE
-                    refreshAllData(isAuto = false)
-                    startAutoRefresh()
-                } else {
-                    log("Login Gagal. Sila semak kata laluan.")
-                }
-            }
+            saveCredentials(ip, pass, cbAutoLogin.isChecked)
+            triggerLoginProcess(ip, pass)
         }
 
         btnRefresh.setOnClickListener {
             refreshAllData(isAuto = false)
+        }
+
+        // Kunci Band LTE Spesifik
+        btnLockBand.setOnClickListener {
+            showBandLockDialog()
         }
 
         // Suis Data ON
@@ -188,7 +207,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Mod Signal Hunter
+        // Signal Hunter Live
         btnSignalHunter.setOnClickListener {
             if (signalHunterJob?.isActive == true) {
                 signalHunterJob?.cancel()
@@ -200,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                 stopAutoRefresh()
                 btnSignalHunter.text = "Berhenti Signal Hunter"
                 btnSignalHunter.setTextColor(0xFFDA3633.toInt())
-                log("Signal Hunter aktif! Gerakkan modem untuk cari signal terbaik.")
+                log("Signal Hunter aktif! Gerakkan modem untuk cari isyarat terbaik.")
                 signalHunterJob = lifecycleScope.launch {
                     while (isActive) {
                         val sig = api.getSignalDiagnostics()
@@ -239,7 +258,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Papar Klien Bersambung
+        // Peranti Bersambung
         btnClients.setOnClickListener {
             lifecycleScope.launch {
                 val clients = api.getConnectedClients()
@@ -303,14 +322,14 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
 
-        // Tukar Tetapan Wi-Fi
+        // Konfigurasi Wi-Fi
         btnWifiSettings.setOnClickListener {
             val layout = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(50, 20, 50, 10)
             }
             val etSsid = EditText(this).apply { hint = "Nama SSID Baru" }
-            val etKey = EditText(this).apply { hint = "Kata Laluan Wi-Fi Baru (min 8 char)" }
+            val etKey = EditText(this).apply { hint = "Kata Laluan Wi-Fi Baru (min 8 aksara)" }
             layout.addView(etSsid)
             layout.addView(etKey)
 
@@ -393,6 +412,75 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showBandLockDialog() {
+        val bands = arrayOf(
+            "Semua Band (Auto Default)",
+            "Band 3 (1800 MHz - Digi/Celcom Utama)",
+            "Band 7 (2600 MHz - Terpantas / Bandar)",
+            "Band 8 (900 MHz - Liputan Jauh)",
+            "Band 1 (2100 MHz)"
+        )
+        val bandCodes = arrayOf("0", "3", "7", "8", "1")
+
+        AlertDialog.Builder(this)
+            .setTitle("Kunci Band LTE")
+            .setItems(bands) { _, which ->
+                val selectedCode = bandCodes[which]
+                lifecycleScope.launch {
+                    log("Mengunci modem ke ${bands[which]}...")
+                    val ok = api.lockLteBand(selectedCode)
+                    log(if (ok) "Band LTE berjaya ditetapkan!" else "Gagal mengunci band pada firmware ini.")
+                    refreshAllData(isAuto = false)
+                }
+            }
+            .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun triggerLoginProcess(ip: String, pass: String) {
+        api.gatewayIp = ip
+        log("Menghubungi modem di $ip...")
+
+        lifecycleScope.launch {
+            btnLogin.isEnabled = false
+            val success = api.login(pass)
+            btnLogin.isEnabled = true
+            if (success) {
+                log("Login Berjaya! Membuka Dashboard...")
+                cardLogin.visibility = View.GONE
+                layoutDashboard.visibility = View.VISIBLE
+                refreshAllData(isAuto = false)
+                startAutoRefresh()
+            } else {
+                log("Login Gagal. Sila semak kata laluan atau IP.")
+            }
+        }
+    }
+
+    private fun saveCredentials(ip: String, pass: String, auto: Boolean) {
+        val prefs = getSharedPreferences("zte_moder_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString("ip", ip)
+            .putString("pass", pass)
+            .putBoolean("auto_login", auto)
+            .apply()
+    }
+
+    private fun loadSavedCredentialsAndAutoLogin() {
+        val prefs = getSharedPreferences("zte_moder_prefs", Context.MODE_PRIVATE)
+        val savedIp = prefs.getString("ip", "192.168.0.1") ?: "192.168.0.1"
+        val savedPass = prefs.getString("pass", "admin") ?: "admin"
+        val isAuto = prefs.getBoolean("auto_login", false)
+
+        etGatewayIp.setText(savedIp)
+        etPassword.setText(savedPass)
+        cbAutoLogin.isChecked = isAuto
+
+        if (isAuto) {
+            triggerLoginProcess(savedIp, savedPass)
+        }
+    }
+
     private fun startAutoRefresh() {
         stopAutoRefresh()
         autoRefreshJob = lifecycleScope.launch {
@@ -470,6 +558,8 @@ class MainActivity : AppCompatActivity() {
                 tvTelcoName.text = "Modem Terputus"
                 tvNetworkType.text = "OFFLINE"
                 tvWanIp.text = "WAN: -"
+                tvDlSpeed.text = "0.0 KB/s"
+                tvUlSpeed.text = "0.0 KB/s"
                 if (!isAuto) log("Amaran: Sambungan ke gateway modem terputus.")
                 return@launch
             }
@@ -498,10 +588,36 @@ class MainActivity : AppCompatActivity() {
             tvCellId.text = "Cell ID: ${sig.cellId}"
             tvWanIp.text = "WAN: ${sig.wanIp}"
 
+            // Tarik kuota & hitung kelajuan speedometer live
             val traffic = api.getTrafficStats()
+            val currentTime = System.currentTimeMillis()
+            if (lastSpeedCalcTime > 0L) {
+                val timeDeltaSec = (currentTime - lastSpeedCalcTime) / 1000.0
+                if (timeDeltaSec > 0.5) {
+                    val rxDelta = if (traffic.realtimeRxBytes >= lastRxBytes) traffic.realtimeRxBytes - lastRxBytes else 0L
+                    val txDelta = if (traffic.realtimeTxBytes >= lastTxBytes) traffic.realtimeTxBytes - lastTxBytes else 0L
+
+                    val dlSpeedBytes = (rxDelta / timeDeltaSec).toLong()
+                    val ulSpeedBytes = (txDelta / timeDeltaSec).toLong()
+
+                    val speed = LiveSpeed()
+                    tvDlSpeed.text = speed.formatSpeed(dlSpeedBytes)
+                    tvUlSpeed.text = speed.formatSpeed(ulSpeedBytes)
+                }
+            }
+            lastRxBytes = traffic.realtimeRxBytes
+            lastTxBytes = traffic.realtimeTxBytes
+            lastSpeedCalcTime = currentTime
+
             tvMonthlyData.text = traffic.formatBytes(traffic.monthlyTotalBytes)
             tvLiveTraffic.text = "Sesi ini: DL ${traffic.formatBytes(traffic.realtimeRxBytes)} | UL ${traffic.formatBytes(traffic.realtimeTxBytes)}"
             tvUpTime.text = "Masa: ${traffic.formatDuration()}"
+
+            // Tarik suhu & info bateri
+            val battery = api.getBatteryHealth()
+            tvBatteryState.text = "Bateri: ${battery.percent}"
+            tvChargingNote.text = if (battery.isCharging) "Sedang Dicas (Charging)" else "Guna Bateri"
+            tvModemTemp.text = "Suhu: ${battery.temperatureCelsius}"
 
             if (!isAuto) {
                 log("Data modem berjaya dikemaskini.")
