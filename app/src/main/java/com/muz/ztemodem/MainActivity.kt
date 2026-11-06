@@ -223,12 +223,13 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun executeReboot(gatewayIp: String) {
+private fun executeReboot(gatewayIp: String) {
         lifecycleScope.launch {
+            log("Menghantar isyarat reboot ke modem...")
             val baseUrl = "http://$gatewayIp"
             val targetUrl = "$baseUrl/goform/goform_set_cmd_process"
 
-            val success = withContext(Dispatchers.IO) {
+            val isTriggered = withContext(Dispatchers.IO) {
                 try {
                     val body = FormBody.Builder()
                         .add("isTest", "false")
@@ -245,18 +246,30 @@ class MainActivity : AppCompatActivity() {
 
                     val response = client.newCall(request).execute()
                     val res = response.body?.string().orEmpty()
+
+                    // Ada firmware pulangkan result 0, ada yang terus senyap
                     res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
                 } catch (e: Exception) {
-                    false
+                    // Jika ralat socket terputus/reset, maksudnya modem sudah padam/restart
+                    val msg = e.localizedMessage?.lowercase().orEmpty()
+                    msg.contains("unexpected end of stream") ||
+                    msg.contains("reset") ||
+                    msg.contains("failed to connect") ||
+                    msg.contains("timeout")
                 }
             }
 
-            if (success) {
-                log("Modem sedang dimulakan semula (Rebooting)...")
+            if (isTriggered) {
+                log(">> MODEM SEDANG REBOOT. Wi-Fi akan terputus sebentar.")
+                // Sorok dashboard dan bawa balik ke skrin login sedia
                 layoutDashboard.visibility = View.GONE
                 cardLogin.visibility = View.VISIBLE
+                btnLogin.isEnabled = true
+                tvTelcoName.text = "Mencari..."
+                tvNetworkType.text = "Tiada Servis"
+                pbSignal.progress = 0
             } else {
-                log("Gagal menghantar arahan Reboot.")
+                log("Gagal menghantar arahan Reboot. Semak sambungan IP.")
             }
         }
     }
