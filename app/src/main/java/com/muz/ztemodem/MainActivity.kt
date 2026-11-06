@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private val api = ZteApiClient()
+    private var autoRefreshJob: Job? = null
     private var signalHunterJob: Job? = null
 
     // Views
@@ -127,14 +128,17 @@ class MainActivity : AppCompatActivity() {
                     log("Login Berjaya! Membuka Dashboard...")
                     cardLogin.visibility = View.GONE
                     layoutDashboard.visibility = View.VISIBLE
-                    refreshAllData()
+                    refreshAllData(isAuto = false)
+                    startAutoRefresh()
                 } else {
                     log("Login Gagal. Sila semak kata laluan.")
                 }
             }
         }
 
-        btnRefresh.setOnClickListener { refreshAllData() }
+        btnRefresh.setOnClickListener {
+            refreshAllData(isAuto = false)
+        }
 
         // Suis Data ON
         btnDataOn.setOnClickListener {
@@ -142,7 +146,7 @@ class MainActivity : AppCompatActivity() {
                 log("Menyambungkan talian data selular...")
                 val ok = api.setMobileDataState(true)
                 log(if (ok) "Data selular disambungkan." else "Gagal menyambung data.")
-                refreshAllData()
+                refreshAllData(isAuto = false)
             }
         }
 
@@ -152,7 +156,7 @@ class MainActivity : AppCompatActivity() {
                 log("Memutuskan data selular...")
                 val ok = api.setMobileDataState(false)
                 log(if (ok) "Data selular dimatikan." else "Gagal mematikan data.")
-                refreshAllData()
+                refreshAllData(isAuto = false)
             }
         }
 
@@ -164,7 +168,7 @@ class MainActivity : AppCompatActivity() {
                 delay(2000)
                 api.setMobileDataState(true)
                 delay(1500)
-                refreshAllData()
+                refreshAllData(isAuto = false)
                 log("IP baru sedang diperoleh.")
             }
         }
@@ -176,10 +180,12 @@ class MainActivity : AppCompatActivity() {
                 btnSignalHunter.text = "Mula Signal Hunter (Live)"
                 btnSignalHunter.setTextColor(0xFF3FB950.toInt())
                 log("Signal Hunter ditamatkan.")
+                startAutoRefresh()
             } else {
+                stopAutoRefresh()
                 btnSignalHunter.text = "Berhenti Signal Hunter"
                 btnSignalHunter.setTextColor(0xFFDA3633.toInt())
-                log("Signal Hunter aktif! Gerakkan modem untuk bacaan terbaik.")
+                log("Signal Hunter aktif! Gerakkan modem untuk cari signal terbaik.")
                 signalHunterJob = lifecycleScope.launch {
                     while (isActive) {
                         val sig = api.getSignalDiagnostics()
@@ -204,7 +210,7 @@ class MainActivity : AppCompatActivity() {
                 log("Mengunci modem ke mod 4G Only...")
                 val ok = api.setNetworkMode("Only_LTE")
                 log(if (ok) "Berjaya dikunci ke 4G Only." else "Gagal menukar mod.")
-                refreshAllData()
+                refreshAllData(isAuto = false)
             }
         }
 
@@ -214,7 +220,7 @@ class MainActivity : AppCompatActivity() {
                 log("Menukar ke mod Auto (4G/3G)...")
                 val ok = api.setNetworkMode("NETWORK_auto")
                 log(if (ok) "Mod auto diaktifkan." else "Gagal menukar mod.")
-                refreshAllData()
+                refreshAllData(isAuto = false)
             }
         }
 
@@ -358,6 +364,7 @@ class MainActivity : AppCompatActivity() {
                 .setMessage("Adakah anda pasti mahu memulakan semula modem ZTE?")
                 .setPositiveButton("Reboot") { _, _ ->
                     lifecycleScope.launch {
+                        stopAutoRefresh()
                         signalHunterJob?.cancel()
                         log("Menghantar isyarat reboot...")
                         api.reboot()
@@ -371,7 +378,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun refreshAllData() {
+    private fun startAutoRefresh() {
+        stopAutoRefresh()
+        autoRefreshJob = lifecycleScope.launch {
+            while (isActive) {
+                refreshAllData(isAuto = true)
+                delay(3000)
+            }
+        }
+    }
+
+    private fun stopAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = null
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::layoutDashboard.isInitialized && layoutDashboard.visibility == View.VISIBLE && signalHunterJob?.isActive != true) {
+            startAutoRefresh()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopAutoRefresh()
+    }
+
+    private fun refreshAllData(isAuto: Boolean = false) {
         lifecycleScope.launch {
             val sig = api.getSignalDiagnostics()
             tvTelcoName.text = sig.provider
@@ -389,7 +423,9 @@ class MainActivity : AppCompatActivity() {
             tvLiveTraffic.text = "Sesi ini: DL ${traffic.formatBytes(traffic.realtimeRxBytes)} | UL ${traffic.formatBytes(traffic.realtimeTxBytes)}"
             tvUpTime.text = "Masa: ${traffic.formatDuration()}"
 
-            log("Data modem berjaya dikemaskini.")
+            if (!isAuto) {
+                log("Data modem berjaya dikemaskini.")
+            }
         }
     }
 
