@@ -1,9 +1,9 @@
 package com.muz.ztemodem
 
 import android.os.Bundle
-import android.util.Base64
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -11,20 +11,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Dispatchers
+import com.muz.ztemodem.network.ZteApiClient
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.Cookie
-import okhttp3.CookieJar
-import okhttp3.FormBody
-import okhttp3.HttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
+    private val api = ZteApiClient()
+
+    // Views
     private lateinit var cardLogin: MaterialCardView
     private lateinit var layoutDashboard: View
     private lateinit var etGatewayIp: TextInputEditText
@@ -34,38 +28,38 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnReboot: Button
     private lateinit var tvLogs: TextView
 
-    // UI Widgets Dashboard
+    // RF Diagnostics Views
     private lateinit var tvTelcoName: TextView
     private lateinit var tvNetworkType: TextView
-    private lateinit var tvSignalStatus: TextView
     private lateinit var pbSignal: ProgressBar
-    private lateinit var tvBatteryPercent: TextView
-    private lateinit var tvChargingState: TextView
+    private lateinit var tvRsrp: TextView
+    private lateinit var tvRsrq: TextView
+    private lateinit var tvRssi: TextView
+    private lateinit var tvSinr: TextView
+    private lateinit var tvCellId: TextView
+    private lateinit var tvWanIp: TextView
 
-    private val cookieStore = mutableMapOf<String, List<Cookie>>()
-    private val fakeUserAgent = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    // Traffic Views
+    private lateinit var tvMonthlyData: TextView
+    private lateinit var tvLiveTraffic: TextView
+    private lateinit var tvUpTime: TextView
 
-    private val client by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(8, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .cookieJar(object : CookieJar {
-                override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-                    cookieStore[url.host] = cookies
-                }
-                override fun loadForRequest(url: HttpUrl): List<Cookie> {
-                    return cookieStore[url.host] ?: ArrayList()
-                }
-            })
-            .build()
-    }
+    // Actions
+    private lateinit var btnLock4G: Button
+    private lateinit var btnLockAuto: Button
+    private lateinit var btnClients: Button
+    private lateinit var btnSms: Button
+    private lateinit var btnUssd: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Bind Views
+        initViews()
+        setupListeners()
+    }
+
+    private fun initViews() {
         cardLogin = findViewById(R.id.cardLogin)
         layoutDashboard = findViewById(R.id.layoutDashboard)
         etGatewayIp = findViewById(R.id.etGatewayIp)
@@ -77,206 +71,174 @@ class MainActivity : AppCompatActivity() {
 
         tvTelcoName = findViewById(R.id.tvTelcoName)
         tvNetworkType = findViewById(R.id.tvNetworkType)
-        tvSignalStatus = findViewById(R.id.tvSignalStatus)
         pbSignal = findViewById(R.id.pbSignal)
-        tvBatteryPercent = findViewById(R.id.tvBatteryPercent)
-        tvChargingState = findViewById(R.id.tvChargingState)
+        tvRsrp = findViewById(R.id.tvRsrp)
+        tvRsrq = findViewById(R.id.tvRsrq)
+        tvRssi = findViewById(R.id.tvRssi)
+        tvSinr = findViewById(R.id.tvSinr)
+        tvCellId = findViewById(R.id.tvCellId)
+        tvWanIp = findViewById(R.id.tvWanIp)
 
+        tvMonthlyData = findViewById(R.id.tvMonthlyData)
+        tvLiveTraffic = findViewById(R.id.tvLiveTraffic)
+        tvUpTime = findViewById(R.id.tvUpTime)
+
+        btnLock4G = findViewById(R.id.btnLock4G)
+        btnLockAuto = findViewById(R.id.btnLockAuto)
+        btnClients = findViewById(R.id.btnClients)
+        btnSms = findViewById(R.id.btnSms)
+        btnUssd = findViewById(R.id.btnUssd)
+    }
+
+    private fun setupListeners() {
         btnLogin.setOnClickListener {
             val ip = etGatewayIp.text.toString().trim()
-            val pwd = etPassword.text.toString().trim()
-            log("Menyambung ke $ip...")
-            executeLogin(ip, pwd)
-        }
+            val pass = etPassword.text.toString().trim()
+            api.gatewayIp = ip
+            log("Menghubungi modem di $ip...")
 
-        btnRefresh.setOnClickListener {
-            val ip = etGatewayIp.text.toString().trim()
-            fetchModemStatus(ip)
-        }
-
-        btnReboot.setOnClickListener {
-            val ip = etGatewayIp.text.toString().trim()
-            showRebootConfirmation(ip)
-        }
-    }
-
-    private fun executeLogin(gatewayIp: String, plainPass: String) {
-        lifecycleScope.launch {
-            btnLogin.isEnabled = false
-            val baseUrl = "http://$gatewayIp"
-            val targetUrl = "$baseUrl/goform/goform_set_cmd_process"
-
-            val success = withContext(Dispatchers.IO) {
-                try {
-                    val base64Pass = Base64.encodeToString(
-                        plainPass.toByteArray(Charsets.UTF_8),
-                        Base64.NO_WRAP
-                    )
-
-                    val body = FormBody.Builder()
-                        .add("isTest", "false")
-                        .add("goformId", "LOGIN")
-                        .add("password", base64Pass)
-                        .build()
-
-                    val request = Request.Builder()
-                        .url(targetUrl)
-                        .post(body)
-                        .header("User-Agent", fakeUserAgent)
-                        .header("Referer", "$baseUrl/index.html")
-                        .header("Origin", baseUrl)
-                        .header("X-Requested-With", "XMLHttpRequest")
-                        .header("Connection", "close")
-                        .build()
-
-                    val response = client.newCall(request).execute()
-                    val resultString = response.body?.string().orEmpty()
-                    resultString.contains("\"result\":\"0\"") || resultString.contains("\"result\":0")
-                } catch (e: Exception) {
-                    log("Ralat: ${e.localizedMessage}")
-                    false
-                }
-            }
-
-            btnLogin.isEnabled = true
-            if (success) {
-                log("Login sukses! Menjana Dashboard...")
-                cardLogin.visibility = View.GONE
-                layoutDashboard.visibility = View.VISIBLE
-                fetchModemStatus(gatewayIp)
-            } else {
-                log("Login gagal. Sila semak semula password.")
-            }
-        }
-    }
-
-    private fun fetchModemStatus(gatewayIp: String) {
-        lifecycleScope.launch {
-            val baseUrl = "http://$gatewayIp"
-            val query = "isTest=false&cmd=network_type,signalbar,battery_charging,battery_vol_percent,battery_value,network_provider"
-            val targetUrl = "$baseUrl/goform/goform_get_cmd_process?$query"
-
-            val jsonString = withContext(Dispatchers.IO) {
-                try {
-                    val request = Request.Builder()
-                        .url(targetUrl)
-                        .get()
-                        .header("User-Agent", fakeUserAgent)
-                        .header("Referer", "$baseUrl/index.html")
-                        .header("Origin", baseUrl)
-                        .header("X-Requested-With", "XMLHttpRequest")
-                        .header("Connection", "close")
-                        .build()
-
-                    val response = client.newCall(request).execute()
-                    response.body?.string().orEmpty()
-                } catch (e: Exception) {
-                    ""
-                }
-            }
-
-            if (jsonString.isNotEmpty()) {
-                parseAndDisplay(jsonString)
-            }
-        }
-    }
-
-    private fun parseAndDisplay(rawJson: String) {
-        try {
-            val json = JSONObject(rawJson)
-
-            // 1. Telco & Network
-            val provider = json.optString("network_provider", "Tiada Rangkaian")
-            val netType = json.optString("network_type", "Tiada Servis")
-            tvTelcoName.text = if (provider.isNotBlank()) provider else "Tiada Servis"
-            tvNetworkType.text = netType
-
-            // 2. Signal Bar
-            val signal = json.optString("signalbar", "0").toIntOrNull() ?: 0
-            pbSignal.progress = signal
-            tvSignalStatus.text = "Bar $signal / 5"
-
-            // 3. Status Bateri
-            val charging = json.optString("battery_charging", "0")
-            tvChargingState.text = if (charging == "1") "Sedang Dicas (Charging)" else "Guna Bateri"
-
-            val battPct = json.optString("battery_vol_percent")
-            val battVal = json.optString("battery_value")
-            when {
-                battPct.isNotBlank() -> tvBatteryPercent.text = "$battPct%"
-                battVal.isNotBlank() -> tvBatteryPercent.text = "$battVal%"
-                else -> tvBatteryPercent.text = "100% (Plugged)"
-            }
-
-            log("Status dikemaskini: $provider | $netType | Signal $signal")
-        } catch (e: Exception) {
-            log("Gagal hurai JSON: ${e.localizedMessage}")
-        }
-    }
-
-    private fun showRebootConfirmation(gatewayIp: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Reboot Modem")
-            .setMessage("Adakah anda pasti mahu mulakan semula modem ZTE?")
-            .setPositiveButton("Reboot") { _, _ -> executeReboot(gatewayIp) }
-            .setNegativeButton("Batal", null)
-            .show()
-    }
-
-private fun executeReboot(gatewayIp: String) {
-        lifecycleScope.launch {
-            log("Menghantar isyarat reboot ke modem...")
-            val baseUrl = "http://$gatewayIp"
-            val targetUrl = "$baseUrl/goform/goform_set_cmd_process"
-
-            val isTriggered = withContext(Dispatchers.IO) {
-                try {
-                    val body = FormBody.Builder()
-                        .add("isTest", "false")
-                        .add("goformId", "REBOOT_DEVICE")
-                        .build()
-
-                    val request = Request.Builder()
-                        .url(targetUrl)
-                        .post(body)
-                        .header("User-Agent", fakeUserAgent)
-                        .header("Referer", "$baseUrl/index.html")
-                        .header("Connection", "close")
-                        .build()
-
-                    val response = client.newCall(request).execute()
-                    val res = response.body?.string().orEmpty()
-
-                    // Ada firmware pulangkan result 0, ada yang terus senyap
-                    res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-                } catch (e: Exception) {
-                    // Jika ralat socket terputus/reset, maksudnya modem sudah padam/restart
-                    val msg = e.localizedMessage?.lowercase().orEmpty()
-                    msg.contains("unexpected end of stream") ||
-                    msg.contains("reset") ||
-                    msg.contains("failed to connect") ||
-                    msg.contains("timeout")
-                }
-            }
-
-            if (isTriggered) {
-                log(">> MODEM SEDANG REBOOT. Wi-Fi akan terputus sebentar.")
-                // Sorok dashboard dan bawa balik ke skrin login sedia
-                layoutDashboard.visibility = View.GONE
-                cardLogin.visibility = View.VISIBLE
+            lifecycleScope.launch {
+                btnLogin.isEnabled = false
+                val success = api.login(pass)
                 btnLogin.isEnabled = true
-                tvTelcoName.text = "Mencari..."
-                tvNetworkType.text = "Tiada Servis"
-                pbSignal.progress = 0
-            } else {
-                log("Gagal menghantar arahan Reboot. Semak sambungan IP.")
+                if (success) {
+                    log("Login Berjaya! Memuatkan Dashboard...")
+                    cardLogin.visibility = View.GONE
+                    layoutDashboard.visibility = View.VISIBLE
+                    refreshAllData()
+                } else {
+                    log("Login Gagal. Semak semula kata laluan.")
+                }
             }
+        }
+
+        btnRefresh.setOnClickListener { refreshAllData() }
+
+        // Kunci 4G Only
+        btnLock4G.setOnClickListener {
+            lifecycleScope.launch {
+                log("Mengunci modem ke mod 4G Only...")
+                val ok = api.setNetworkMode("Only_LTE")
+                log(if (ok) "Berjaya dikunci ke 4G Only." else "Gagal menukar mod.")
+                refreshAllData()
+            }
+        }
+
+        // Kunci Mod Auto
+        btnLockAuto.setOnClickListener {
+            lifecycleScope.launch {
+                log("Menukar ke mod Auto (4G/3G)...")
+                val ok = api.setNetworkMode("NETWORK_auto")
+                log(if (ok) "Mod auto diaktifkan." else "Gagal menukar mod.")
+                refreshAllData()
+            }
+        }
+
+        // Papar Klien Bersambung
+        btnClients.setOnClickListener {
+            lifecycleScope.launch {
+                val clients = api.getConnectedClients()
+                val msg = if (clients.isEmpty()) {
+                    "Tiada peranti lain dikesan."
+                } else {
+                    clients.joinToString("\n\n") { "Nama: ${it.hostName}\nIP: ${it.ipAddress}\nMAC: ${it.macAddress}" }
+                }
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Peranti Bersambung (${clients.size})")
+                    .setMessage(msg)
+                    .setPositiveButton("Tutup", null)
+                    .show()
+            }
+        }
+
+        // Papar Peti Masuk SMS
+        btnSms.setOnClickListener {
+            lifecycleScope.launch {
+                log("Memuat turun senarai SMS...")
+                val messages = api.getSmsMessages()
+                val msg = if (messages.isEmpty()) {
+                    "Peti masuk SMS kosong."
+                } else {
+                    messages.joinToString("\n----------------\n") { "Dari: ${it.sender} (${it.timestamp})\n${it.content}" }
+                }
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle("Peti Masuk SMS")
+                    .setMessage(msg)
+                    .setPositiveButton("Tutup", null)
+                    .show()
+            }
+        }
+
+        // Dail USSD (Cth: *128#)
+        btnUssd.setOnClickListener {
+            val input = EditText(this)
+            input.hint = "*128#"
+            AlertDialog.Builder(this)
+                .setTitle("Dail USSD Telco")
+                .setMessage("Masukkan kod USSD:")
+                .setView(input)
+                .setPositiveButton("Hantar") { _, _ ->
+                    val code = input.text.toString().trim()
+                    if (code.isNotEmpty()) {
+                        lifecycleScope.launch {
+                            log("Menghantar kod USSD $code...")
+                            val reply = api.sendUssd(code)
+                            AlertDialog.Builder(this@MainActivity)
+                                .setTitle("Balasan USSD")
+                                .setMessage(reply)
+                                .setPositiveButton("OK", null)
+                                .show()
+                        }
+                    }
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+        }
+
+        // Reboot Modem
+        btnReboot.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Reboot Modem")
+                .setMessage("Adakah anda pasti mahu memulakan semula modem ZTE?")
+                .setPositiveButton("Reboot") { _, _ ->
+                    lifecycleScope.launch {
+                        log("Menghantar isyarat reboot...")
+                        api.reboot()
+                        log(">> MODEM SEDANG REBOOT. Wi-Fi akan terputus.")
+                        layoutDashboard.visibility = View.GONE
+                        cardLogin.visibility = View.VISIBLE
+                    }
+                }
+                .setNegativeButton("Batal", null)
+                .show()
         }
     }
 
-    private fun log(msg: String) {
-        runOnUiThread {
-            tvLogs.append("\n$msg")
+    private fun refreshAllData() {
+        lifecycleScope.launch {
+            // Tarik bacaan Signal RF
+            val sig = api.getSignalDiagnostics()
+            tvTelcoName.text = sig.provider
+            tvNetworkType.text = sig.networkType
+            pbSignal.progress = sig.signalBar
+            tvRsrp.text = "RSRP: ${sig.rsrp} dBm"
+            tvRsrq.text = "RSRQ: ${sig.rsrq} dB"
+            tvRssi.text = "RSSI: ${sig.rssi} dBm"
+            tvSinr.text = "SINR: ${sig.sinr} dB"
+            tvCellId.text = "Cell ID: ${sig.cellId}"
+            tvWanIp.text = "WAN: ${sig.wanIp}"
+
+            // Tarik Kuota & Masa Bersambung
+            val traffic = api.getTrafficStats()
+            tvMonthlyData.text = traffic.formatBytes(traffic.monthlyTotalBytes)
+            tvLiveTraffic.text = "Sesi ini: DL ${traffic.formatBytes(traffic.realtimeRxBytes)} | UL ${traffic.formatBytes(traffic.realtimeTxBytes)}"
+            tvUpTime.text = "Masa: ${traffic.formatDuration()}"
+
+            log("Semua data modem berjaya dikemaskini.")
         }
+    }
+
+    private fun log(text: String) {
+        runOnUiThread { tvLogs.append("\n$text") }
     }
 }
