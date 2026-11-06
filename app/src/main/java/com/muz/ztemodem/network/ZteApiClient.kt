@@ -2,6 +2,7 @@ package com.muz.ztemodem.network
 
 import android.util.Base64
 import com.muz.ztemodem.data.ConnectedClient
+import com.muz.ztemodem.data.PingResult
 import com.muz.ztemodem.data.SignalDiagnostics
 import com.muz.ztemodem.data.SmsMessage
 import com.muz.ztemodem.data.TrafficStats
@@ -15,7 +16,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
@@ -24,8 +30,8 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
     private val cookieStore = mutableMapOf<String, List<Cookie>>()
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(8, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .cookieJar(object : CookieJar {
             override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
@@ -41,8 +47,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
     private val setUrl: String get() = "$baseUrl/goform/goform_set_cmd_process"
     private val getUrl: String get() = "$baseUrl/goform/goform_get_cmd_process"
 
-    // Helper POST Form ke modem
-    private suspend fun sendPost(formBody: FormBody): String = withContext(Dispatchers.IO) {
+    suspend fun sendPost(formBody: FormBody): String = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url(setUrl)
@@ -60,8 +65,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // Helper GET dari modem
-    private suspend fun sendGet(query: String): String = withContext(Dispatchers.IO) {
+    suspend fun sendGet(query: String): String = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url("$getUrl?$query")
@@ -137,9 +141,20 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 4. KUNCI RANGKAIAN (4G ONLY ATAU AUTO)
+    // 4. SUIS DATA MUDAH ALIH (CONNECT / DISCONNECT)
+    suspend fun setMobileDataState(connect: Boolean): Boolean {
+        val cmd = if (connect) "CONNECT_NETWORK" else "DISCONNECT_NETWORK"
+        val body = FormBody.Builder()
+            .add("isTest", "false")
+            .add("goformId", cmd)
+            .build()
+
+        val res = sendPost(body)
+        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+    }
+
+    // 5. KUNCI RANGKAIAN (4G ONLY / AUTO)
     suspend fun setNetworkMode(mode: String): Boolean {
-        // mode: "Only_LTE" atau "NETWORK_auto"
         val body = FormBody.Builder()
             .add("isTest", "false")
             .add("goformId", "SET_BEARER_PREFERENCE")
@@ -150,7 +165,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 5. SENARAI PERANTI HOTSPOT
+    // 6. SENARAI PERANTI HOTSPOT
     suspend fun getConnectedClients(): List<ConnectedClient> {
         val query = "isTest=false&cmd=station_list"
         val raw = sendGet(query)
@@ -169,12 +184,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // firmware sesetengah simpan format berbeza
+            // fallback JSON format lama
         }
         return list
     }
 
-    // 6. PETI MASUK SMS
+    // 7. PETI MASUK SMS
     suspend fun getSmsMessages(): List<SmsMessage> {
         val query = "isTest=false&cmd=sms_data_total,sms_page_data&page=0&data_per_page=10&mem_store=1&tags=10"
         val raw = sendGet(query)
@@ -185,24 +200,58 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
             for (i in 0 until messages.length()) {
                 val m = messages.getJSONObject(i)
                 val rawContent = m.optString("content", "")
-                val decoded = decodeUcs2(rawContent)
-
                 list.add(
                     SmsMessage(
                         id = m.optString("id", ""),
                         sender = m.optString("number", "Telco"),
-                        content = decoded,
+                        content = decodeUcs2(rawContent),
                         timestamp = m.optString("date", "")
                     )
                 )
             }
         } catch (e: Exception) {
-            // SMS parsing exception fallback
+            // parsing error fallback
         }
         return list
     }
 
-    // 7. DAIL USSD
+    // 8. HANTAR SMS (UNICODE / UCS2)
+    suspend fun sendSms(recipient: String, messageText: String): Boolean {
+        val timeStamp = SimpleDateFormat("yy;MM;dd;HH;mm;ss;+32", Locale.US).format(Date())
+        val encodedMsg = encodeUcs2(messageText)
+
+        val body = FormBody.Builder()
+            .add("isTest", "false")
+            .add("goformId", "SEND_SMS")
+            .add("Number", recipient)
+            .add("sms_time", timeStamp)
+            .add("MessageBody", encodedMsg)
+            .add("ID", "-1")
+            .add("encode_type", "UNICODE")
+            .build()
+
+        val res = sendPost(body)
+        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+    }
+
+    // 9. TETAPAN WI-FI (SSID & PASSWORD)
+    suspend fun updateWifiConfig(newSsid: String, newKey: String): Boolean {
+        val body = FormBody.Builder()
+            .add("isTest", "false")
+            .add("goformId", "SET_WIFI_INFO")
+            .add("wifi_enabled", "1")
+            .add("ssid", newSsid)
+            .add("AuthMode", "WPA2PSK")
+            .add("EncrypType", "AES")
+            .add("WpaKey", newKey)
+            .add("hide_ssid", "0")
+            .build()
+
+        val res = sendPost(body)
+        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+    }
+
+    // 10. DAIL USSD
     suspend fun sendUssd(code: String): String {
         val encodedCode = URLEncoder.encode(code, "UTF-8")
         val body = FormBody.Builder()
@@ -213,7 +262,6 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
             .build()
 
         sendPost(body)
-        // Tunggu modem proses arahan rangkaian telco
         kotlinx.coroutines.delay(3500)
         val query = "isTest=false&cmd=ussd_data,ussd_process"
         val res = sendGet(query)
@@ -226,20 +274,23 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 8. KAWALAN SLEEP MODE WI-FI (0 = Sentiasa On)
-    suspend fun setWifiSleepMode(keepAlwaysOn: Boolean): Boolean {
-        val sleepVal = if (keepAlwaysOn) "0" else "10"
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "SET_WIFI_SLEEP")
-            .add("sleep_time", sleepVal)
-            .build()
-
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+    // 11. UJIAN PING LATENCY SOKET
+    suspend fun pingHost(host: String = "8.8.8.8", port: Int = 53): PingResult = withContext(Dispatchers.IO) {
+        val start = System.currentTimeMillis()
+        var reachable = false
+        try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), 2500)
+                reachable = true
+            }
+        } catch (e: Exception) {
+            reachable = false
+        }
+        val latency = System.currentTimeMillis() - start
+        PingResult(host, if (reachable) latency else -1L, reachable)
     }
 
-    // 9. REBOOT MODEM
+    // 12. REBOOT MODEM
     suspend fun reboot(): Boolean {
         val body = FormBody.Builder()
             .add("isTest", "false")
@@ -250,16 +301,24 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
             val res = sendPost(body)
             res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
         } catch (e: Exception) {
-            // Socket drop tanda modem sah mati restart
             true
         }
     }
 
-    // Helper decode UCS2 Hex yang biasa dihantar oleh pelayan modem ZTE
+    // Encoder UCS2 Hex
+    private fun encodeUcs2(src: String): String {
+        val sb = StringBuilder()
+        for (c in src) {
+            sb.append(String.format("%04X", c.code))
+        }
+        return sb.toString()
+    }
+
+    // Decoder UCS2 Hex
     private fun decodeUcs2(src: String): String {
         if (src.length % 4 != 0) return src
         return try {
-            val sb = java.lang.StringBuilder()
+            val sb = StringBuilder()
             var i = 0
             while (i < src.length) {
                 val hexChar = src.substring(i, i + 4)
