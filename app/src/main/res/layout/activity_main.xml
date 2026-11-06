@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Header Atas Bersama Badge LIVE / OFFLINE -->
+        <!-- Top Header Bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -119,7 +119,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColorHint="#8B949E"
-                    android:layout_marginBottom="14dp"
+                    android:layout_marginBottom="8dp"
                     app:boxBackgroundColor="#0D1117">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -131,6 +131,17 @@
                         android:textColor="#FFFFFF"
                         android:inputType="textPassword" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Suis Auto Login & Ingat Kata Laluan -->
+                <CheckBox
+                    android:id="@+id/cbAutoLogin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ingat &amp; Log Masuk Automatik"
+                    android:textColor="#8B949E"
+                    android:textSize="12sp"
+                    android:checked="true"
+                    android:layout_marginBottom="10dp" />
 
                 <Button
                     android:id="@+id/btnLogin"
@@ -238,7 +249,143 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 2: Kawalan Data Selular & Reset IP -->
+            <!-- KAD 2: Speedometer Kelajuan Live (DL / UL) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kelajuan Rangkaian Semasa"
+                        android:textColor="#8B949E"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="2">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼ DOWNLOAD"
+                                android:textColor="#3FB950"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDlSpeed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0 KB/s"
+                                android:textColor="#FFFFFF"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▲ UPLOAD"
+                                android:textColor="#58A6FF"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvUlSpeed"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0.0 KB/s"
+                                android:textColor="#FFFFFF"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 3: Kesihatan Bateri & Suhu Modem -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvBatteryState"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Bateri: --%"
+                            android:textColor="#F0F6FC"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvChargingNote"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Mod Bateri / Pengecas"
+                            android:textColor="#8B949E"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvModemTemp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#21262D"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="6dp"
+                        android:text="Suhu: --°C"
+                        android:textColor="#E3B341"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 4: Kawalan Sambungan Internet & Reset IP -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -305,7 +452,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 3: Kaunter Kuota & Trafik -->
+            <!-- KAD 5: Kaunter Kuota Bulanan -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -363,7 +510,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- KAD 4: Kotak Alat & Pengurusan -->
+            <!-- KAD 6: Kotak Alat & Pengurusan -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -388,21 +535,33 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="10dp" />
 
+                    <!-- Kunci Band LTE & Mod Rangkaian -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:weightSum="2"
+                        android:weightSum="3"
                         android:layout_marginBottom="8dp">
+
+                        <Button
+                            android:id="@+id/btnLockBand"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Kunci Band"
+                            android:textSize="11sp"
+                            android:backgroundTint="#8957E5"
+                            app:cornerRadius="8dp" />
 
                         <Button
                             android:id="@+id/btnLock4G"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginEnd="4dp"
-                            android:text="Lock 4G Only"
-                            android:textSize="12sp"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="4G Only"
+                            android:textSize="11sp"
                             android:backgroundTint="#1F6FEB"
                             app:cornerRadius="8dp" />
 
@@ -411,9 +570,9 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:layout_marginStart="4dp"
+                            android:layout_marginStart="3dp"
                             android:text="Mod Auto"
-                            android:textSize="12sp"
+                            android:textSize="11sp"
                             android:backgroundTint="#21262D"
                             app:cornerRadius="8dp" />
                     </LinearLayout>
