@@ -1,335 +1,549 @@
-package com.muz.ztemodem.network
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1117"
+    android:fillViewport="true">
 
-import android.util.Base64
-import com.muz.ztemodem.data.ConnectedClient
-import com.muz.ztemodem.data.PingResult
-import com.muz.ztemodem.data.SignalDiagnostics
-import com.muz.ztemodem.data.SmsMessage
-import com.muz.ztemodem.data.TrafficStats
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.Cookie
-import okhttp3.CookieJar
-import okhttp3.FormBody
-import okhttp3.HttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONArray
-import org.json.JSONObject
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.net.URLEncoder
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.TimeUnit
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
+        <!-- Header Atas Bersama Badge LIVE / OFFLINE -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
 
-    private val fakeUserAgent = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-    private val cookieStore = mutableMapOf<String, List<Cookie>>()
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="ZTE MODER PRO"
+                android:textColor="#58A6FF"
+                android:textSize="20sp"
+                android:letterSpacing="0.05"
+                android:textStyle="bold" />
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(5, TimeUnit.SECONDS)
-        .retryOnConnectionFailure(true)
-        .cookieJar(object : CookieJar {
-            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-                cookieStore[url.host] = cookies
-            }
-            override fun loadForRequest(url: HttpUrl): List<Cookie> {
-                return cookieStore[url.host] ?: ArrayList()
-            }
-        })
-        .build()
+            <!-- Badge Live Sync -->
+            <LinearLayout
+                android:id="@+id/layoutLiveStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="#161B22"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:layout_marginEnd="6dp"
+                android:visibility="gone">
 
-    private val baseUrl: String get() = "http://$gatewayIp"
-    private val setUrl: String get() = "$baseUrl/goform/goform_set_cmd_process"
-    private val getUrl: String get() = "$baseUrl/goform/goform_get_cmd_process"
+                <View
+                    android:id="@+id/viewLiveDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/dot_live"
+                    android:layout_marginEnd="5dp" />
 
-    suspend fun sendPost(formBody: FormBody): String = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(setUrl)
-                .post(formBody)
-                .header("User-Agent", fakeUserAgent)
-                .header("Referer", "$baseUrl/index.html")
-                .header("Origin", baseUrl)
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Connection", "close")
-                .build()
+                <TextView
+                    android:id="@+id/tvLiveText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LIVE"
+                    android:textColor="#3FB950"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
-            client.newCall(request).execute().body?.string().orEmpty()
-        } catch (e: Exception) {
-            "ERROR: ${e.localizedMessage}"
-        }
-    }
+            <TextView
+                android:id="@+id/tvDeviceTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="MF90"
+                android:textColor="#8B949E"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
-    suspend fun sendGet(query: String): String = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url("$getUrl?$query")
-                .get()
-                .header("User-Agent", fakeUserAgent)
-                .header("Referer", "$baseUrl/index.html")
-                .header("Origin", baseUrl)
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Connection", "close")
-                .build()
+        <!-- KAD LOGIN -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLogin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#161B22"
+            app:cardCornerRadius="14dp"
+            app:strokeColor="#30363D"
+            app:strokeWidth="1dp">
 
-            client.newCall(request).execute().body?.string().orEmpty()
-        } catch (e: Exception) {
-            ""
-        }
-    }
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-    // 1. LOGIN
-    suspend fun login(plainPass: String): Boolean {
-        val base64Pass = Base64.encodeToString(plainPass.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "LOGIN")
-            .add("password", base64Pass)
-            .build()
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sambung Modem ZTE"
+                    android:textColor="#F0F6FC"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-    }
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColorHint="#8B949E"
+                    android:layout_marginBottom="10dp"
+                    app:boxBackgroundColor="#0D1117">
 
-    // 2. DIAGNOSTIK SIGNAL RF LENGKAP
-    suspend fun getSignalDiagnostics(): SignalDiagnostics {
-        val query = "isTest=false&cmd=network_type,signalbar,network_provider,lte_rsrp,lte_rsrq,lte_rssi,lte_snr,cell_id,wan_ipaddr"
-        val raw = sendGet(query)
-        if (raw.isBlank() || raw.startsWith("ERROR")) {
-            return SignalDiagnostics(isReachable = false)
-        }
-        return try {
-            val j = JSONObject(raw)
-            SignalDiagnostics(
-                isReachable = true,
-                provider = j.optString("network_provider", "Tiada Rangkaian"),
-                networkType = j.optString("network_type", "Tiada"),
-                signalBar = j.optString("signalbar", "0").toIntOrNull() ?: 0,
-                rsrp = j.optString("lte_rsrp", "-").ifBlank { "-" },
-                rsrq = j.optString("lte_rsrq", "-").ifBlank { "-" },
-                rssi = j.optString("lte_rssi", "-").ifBlank { "-" },
-                sinr = j.optString("lte_snr", "-").ifBlank { "-" },
-                cellId = j.optString("cell_id", "-").ifBlank { "-" },
-                wanIp = j.optString("wan_ipaddr", "-").ifBlank { "-" }
-            )
-        } catch (e: Exception) {
-            SignalDiagnostics(isReachable = false)
-        }
-    }
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etGatewayIp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Gateway IP"
+                        android:text="192.168.0.1"
+                        android:textColor="#FFFFFF" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-    // 3. STATISTIK KUOTA & DATA
-    suspend fun getTrafficStats(): TrafficStats {
-        val query = "isTest=false&cmd=monthly_tx_bytes,monthly_rx_bytes,realtime_tx_bytes,realtime_rx_bytes,realtime_time"
-        val raw = sendGet(query)
-        return try {
-            val j = JSONObject(raw)
-            val rx = j.optLong("monthly_rx_bytes", 0L)
-            val tx = j.optLong("monthly_tx_bytes", 0L)
-            val rrx = j.optLong("realtime_rx_bytes", 0L)
-            val rtx = j.optLong("realtime_tx_bytes", 0L)
-            val time = j.optLong("realtime_time", 0L)
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColorHint="#8B949E"
+                    android:layout_marginBottom="14dp"
+                    app:boxBackgroundColor="#0D1117">
 
-            TrafficStats(
-                monthlyTotalBytes = rx + tx,
-                realtimeRxBytes = rrx,
-                realtimeTxBytes = rtx,
-                connectedTimeSeconds = time
-            )
-        } catch (e: Exception) {
-            TrafficStats()
-        }
-    }
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Kata Laluan Web UI"
+                        android:text="admin"
+                        android:textColor="#FFFFFF"
+                        android:inputType="textPassword" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-    // 4. SUIS DATA SELULAR
-    suspend fun setMobileDataState(connect: Boolean): Boolean {
-        val cmd = if (connect) "CONNECT_NETWORK" else "DISCONNECT_NETWORK"
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", cmd)
-            .build()
+                <Button
+                    android:id="@+id/btnLogin"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Login"
+                    android:textStyle="bold"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-    }
+        <!-- DASHBOARD CONTAINER -->
+        <LinearLayout
+            android:id="@+id/layoutDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
 
-    // 5. KUNCI RANGKAIAN (4G ONLY / AUTO)
-    suspend fun setNetworkMode(mode: String): Boolean {
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "SET_BEARER_PREFERENCE")
-            .add("BearerPreference", mode)
-            .build()
+            <!-- KAD 1: Signal & RF Metrics -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-    }
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-    // 6. SENARAI PERANTI HOTSPOT
-    suspend fun getConnectedClients(): List<ConnectedClient> {
-        val query = "isTest=false&cmd=station_list"
-        val raw = sendGet(query)
-        val list = mutableListOf<ConnectedClient>()
-        try {
-            val j = JSONObject(raw)
-            val array = j.optJSONArray("station_list") ?: JSONArray()
-            for (i in 0 until array.length()) {
-                val item = array.getJSONObject(i)
-                list.add(
-                    ConnectedClient(
-                        ipAddress = item.optString("ip_addr", "-"),
-                        macAddress = item.optString("mac_addr", "-"),
-                        hostName = item.optString("host_name", "Peranti Tanpa Nama")
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            // Abaikan ralat huraian format
-        }
-        return list
-    }
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
-    // 7. PETI MASUK SMS
-    suspend fun getSmsMessages(): List<SmsMessage> {
-        val query = "isTest=false&cmd=sms_data_total,sms_page_data&page=0&data_per_page=10&mem_store=1&tags=10"
-        val raw = sendGet(query)
-        val list = mutableListOf<SmsMessage>()
-        try {
-            val j = JSONObject(raw)
-            val messages = j.optJSONArray("messages") ?: JSONArray()
-            for (i in 0 until messages.length()) {
-                val m = messages.getJSONObject(i)
-                val rawContent = m.optString("content", "")
-                list.add(
-                    SmsMessage(
-                        id = m.optString("id", ""),
-                        sender = m.optString("number", "Telco"),
-                        content = decodeUcs2(rawContent),
-                        timestamp = m.optString("date", "")
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            // Abaikan ralat SMS
-        }
-        return list
-    }
+                        <TextView
+                            android:id="@+id/tvTelcoName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Mencari Telco..."
+                            android:textColor="#58A6FF"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
 
-    // 8. HANTAR SMS
-    suspend fun sendSms(recipient: String, messageText: String): Boolean {
-        val timeStamp = SimpleDateFormat("yy;MM;dd;HH;mm;ss;+32", Locale.US).format(Date())
-        val encodedMsg = encodeUcs2(messageText)
+                        <TextView
+                            android:id="@+id/tvNetworkType"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="#238636"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:text="LTE"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "SEND_SMS")
-            .add("Number", recipient)
-            .add("sms_time", timeStamp)
-            .add("MessageBody", encodedMsg)
-            .add("ID", "-1")
-            .add("encode_type", "UNICODE")
-            .build()
+                    <ProgressBar
+                        android:id="@+id/pbSignal"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="10dp"
+                        android:max="5"
+                        android:progress="0"
+                        android:progressTint="#3FB950" />
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-    }
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#21262D"
+                        android:layout_marginVertical="10dp" />
 
-    // 9. TETAPAN WI-FI (SSID & PASSWORD)
-    suspend fun updateWifiConfig(newSsid: String, newKey: String): Boolean {
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "SET_WIFI_INFO")
-            .add("wifi_enabled", "1")
-            .add("ssid", newSsid)
-            .add("AuthMode", "WPA2PSK")
-            .add("EncrypType", "AES")
-            .add("WpaKey", newKey)
-            .add("hide_ssid", "0")
-            .build()
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:rowCount="3">
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-    }
+                        <TextView android:id="@+id/tvRsrp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSRP: -- dBm" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvRsrq" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSRQ: -- dB" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvRssi" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSSI: -- dBm" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvSinr" android:layout_width="0dp" android:layout_columnWeight="1" android:text="SINR: -- dB" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvCellId" android:layout_width="0dp" android:layout_columnWeight="1" android:text="Cell ID: --" android:textColor="#58A6FF" android:textSize="12sp"/>
+                        <TextView android:id="@+id/tvWanIp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="WAN: --" android:textColor="#8B949E" android:textSize="12sp"/>
+                    </GridLayout>
 
-    // 10. DAIL USSD
-    suspend fun sendUssd(code: String): String {
-        val encodedCode = URLEncoder.encode(code, "UTF-8")
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "USSD_PROCESS")
-            .add("USSD_operator", "USSD_send")
-            .add("USSD_send_number", encodedCode)
-            .build()
+                    <Button
+                        android:id="@+id/btnSignalHunter"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Mula Signal Hunter (Live)"
+                        android:textSize="12sp"
+                        android:backgroundTint="#21262D"
+                        android:textColor="#3FB950"
+                        app:cornerRadius="8dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-        sendPost(body)
-        kotlinx.coroutines.delay(3500)
-        val query = "isTest=false&cmd=ussd_data,ussd_process"
-        val res = sendGet(query)
-        return try {
-            val j = JSONObject(res)
-            val rawMsg = j.optString("ussd_data", "")
-            if (rawMsg.isNotBlank()) decodeUcs2(rawMsg) else "Tiada respon dari Telco (Cuba sekali lagi)."
-        } catch (e: Exception) {
-            "Gagal menerima balasan USSD."
-        }
-    }
+            <!-- KAD 2: Kawalan Data Selular & Reset IP -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
 
-    // 11. UJIAN PING SOKET
-    suspend fun pingHost(host: String = "8.8.8.8", port: Int = 53): PingResult = withContext(Dispatchers.IO) {
-        val start = System.currentTimeMillis()
-        var reachable = false
-        try {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), 2500)
-                reachable = true
-            }
-        } catch (e: Exception) {
-            reachable = false
-        }
-        val latency = System.currentTimeMillis() - start
-        PingResult(host, if (reachable) latency else -1L, reachable)
-    }
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-    // 12. REBOOT MODEM
-    suspend fun reboot(): Boolean {
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "REBOOT_DEVICE")
-            .build()
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kawalan Sambungan Internet"
+                        android:textColor="#F0F6FC"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="10dp" />
 
-        return try {
-            val res = sendPost(body)
-            res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
-        } catch (e: Exception) {
-            true
-        }
-    }
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3">
 
-    private fun encodeUcs2(src: String): String {
-        val sb = StringBuilder()
-        for (c in src) {
-            sb.append(String.format("%04X", c.code))
-        }
-        return sb.toString()
-    }
+                        <Button
+                            android:id="@+id/btnDataOn"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Data ON"
+                            android:textSize="11sp"
+                            android:backgroundTint="#238636"
+                            app:cornerRadius="8dp" />
 
-    private fun decodeUcs2(src: String): String {
-        if (src.length % 4 != 0) return src
-        return try {
-            val sb = StringBuilder()
-            var i = 0
-            while (i < src.length) {
-                val hexChar = src.substring(i, i + 4)
-                sb.append(hexChar.toInt(16).toChar())
-                i += 4
-            }
-            sb.toString()
-        } catch (e: Exception) {
-            src
-        }
-    }
-}
+                        <Button
+                            android:id="@+id/btnDataOff"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="Data OFF"
+                            android:textSize="11sp"
+                            android:backgroundTint="#DA3633"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnResetIp"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="3dp"
+                            android:text="Tukar IP"
+                            android:textSize="11sp"
+                            android:backgroundTint="#1F6FEB"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 3: Kaunter Kuota & Trafik -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Penggunaan Kuota Bulanan"
+                        android:textColor="#8B949E"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tvMonthlyData"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 MB"
+                        android:textColor="#FFFFFF"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:layout_marginVertical="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvLiveTraffic"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Sesi ini: DL -- | UL --"
+                            android:textColor="#8B949E"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tvUpTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Masa: 00j 00m"
+                            android:textColor="#58A6FF"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 4: Kotak Alat & Pengurusan -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kotak Alat &amp; Pengurusan"
+                        android:textColor="#F0F6FC"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="10dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="2"
+                        android:layout_marginBottom="8dp">
+
+                        <Button
+                            android:id="@+id/btnLock4G"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="Lock 4G Only"
+                            android:textSize="12sp"
+                            android:backgroundTint="#1F6FEB"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnLockAuto"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="Mod Auto"
+                            android:textSize="12sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3"
+                        android:layout_marginBottom="8dp">
+
+                        <Button
+                            android:id="@+id/btnClients"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Peranti"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnSms"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="Peti SMS"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnUssd"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="3dp"
+                            android:text="USSD"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3">
+
+                        <Button
+                            android:id="@+id/btnSendSms"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="3dp"
+                            android:text="Kirim SMS"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnWifiSettings"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="3dp"
+                            android:text="Wi-Fi"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+
+                        <Button
+                            android:id="@+id/btnPing"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="3dp"
+                            android:text="Uji Ping"
+                            android:textSize="11sp"
+                            android:backgroundTint="#21262D"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Butang Refresh & Reboot -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_marginBottom="16dp">
+
+                <Button
+                    android:id="@+id/btnRefresh"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="Refresh"
+                    android:backgroundTint="#21262D"
+                    android:textColor="#58A6FF"
+                    app:cornerRadius="10dp" />
+
+                <Button
+                    android:id="@+id/btnReboot"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Reboot"
+                    android:backgroundTint="#DA3633"
+                    android:textColor="#FFFFFF"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Sistem Log -->
+        <TextView
+            android:id="@+id/tvLogs"
+            android:layout_width="match_parent"
+            android:layout_height="65dp"
+            android:background="#05070A"
+            android:padding="8dp"
+            android:textColor="#3FB950"
+            android:fontFamily="monospace"
+            android:textSize="10sp"
+            android:text="Sedia." />
+
+    </LinearLayout>
+</ScrollView>
