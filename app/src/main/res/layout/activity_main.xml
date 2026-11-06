@@ -1,105 +1,336 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#121212">
+    android:background="#0D1117"
+    android:fillViewport="true">
 
-    <!-- Tajuk App -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="ZTE Moder"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
-
-    <!-- Input Gateway IP -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColorHint="#AAAAAA"
-        android:layout_marginBottom="12dp">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etGatewayIp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Gateway IP (cth: 192.168.0.1)"
-            android:text="192.168.0.1"
-            android:textColor="#FFFFFF"
-            android:inputType="textUri" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Input Password -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColorHint="#AAAAAA"
-        android:layout_marginBottom="16dp">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etPassword"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Password Web UI"
-            android:text="admin"
-            android:textColor="#FFFFFF"
-            android:inputType="textPassword" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Barisan Butang -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="2"
-        android:layout_marginBottom="16dp">
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <Button
-            android:id="@+id/btnLogin"
-            android:layout_width="0dp"
+        <!-- Top App Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="6dp"
-            android:text="Login" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
 
-        <Button
-            android:id="@+id/btnCheckStatus"
-            android:layout_width="0dp"
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="ZTE MODER"
+                android:textColor="#58A6FF"
+                android:textSize="20sp"
+                android:letterSpacing="0.05"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDeviceTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="#161B22"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="MF90"
+                android:textColor="#8B949E"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- KAD 1: Login Box (Boleh sorok lepas login) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLogin"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="6dp"
-            android:text="Semak Status"
-            android:enabled="false" />
-    </LinearLayout>
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#161B22"
+            app:cardCornerRadius="14dp"
+            app:strokeColor="#30363D"
+            app:strokeWidth="1dp">
 
-    <!-- Paparan Log Console Mentah -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Console Response Modem:"
-        android:textColor="#888888"
-        android:textSize="12sp"
-        android:layout_marginBottom="4dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#1E1E1E"
-        android:padding="12dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sambungan Gateway"
+                    android:textColor="#F0F6FC"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColorHint="#8B949E"
+                    android:layout_marginBottom="10dp"
+                    app:boxBackgroundColor="#0D1117">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etGatewayIp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="IP Modem"
+                        android:text="192.168.0.1"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColorHint="#8B949E"
+                    android:layout_marginBottom="14dp"
+                    app:boxBackgroundColor="#0D1117">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Password Web UI"
+                        android:text="admin"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:inputType="textPassword" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <Button
+                    android:id="@+id/btnLogin"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Sambung ke Modem"
+                    android:textStyle="bold"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- DASHBOARD CONTAINER (Mula-mula disorok, keluar lepas login) -->
+        <LinearLayout
+            android:id="@+id/layoutDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- KAD 2: Status Rangkaian & Telco -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvTelcoName"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Mencari..."
+                            android:textColor="#58A6FF"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvNetworkType"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="#238636"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:text="4G LTE"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#21262D"
+                        android:layout_marginVertical="12dp" />
+
+                    <!-- Bar Isyarat Signal -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Kekuatan Isyarat"
+                            android:textColor="#8B949E"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvSignalStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Bar 0 / 5"
+                            android:textColor="#3FB950"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pbSignal"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="8dp"
+                        android:max="5"
+                        android:progress="3"
+                        android:progressTint="#3FB950" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- KAD 3: Info Bateri & Pengecasan -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="#161B22"
+                app:cardCornerRadius="14dp"
+                app:strokeColor="#30363D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Status Bateri"
+                            android:textColor="#F0F6FC"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvChargingState"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Tidak Mengecas"
+                            android:textColor="#8B949E"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="bottom"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:id="@+id/tvBatteryPercent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--%"
+                            android:textColor="#F0F6FC"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvBatteryNote"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_marginBottom="4dp"
+                            android:text="(Mod Bateri / Bypass)"
+                            android:textColor="#8B949E"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Butang Tindakan Pantas -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_marginBottom="16dp">
+
+                <Button
+                    android:id="@+id/btnRefresh"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="Refresh"
+                    android:backgroundTint="#21262D"
+                    android:textColor="#58A6FF"
+                    app:cornerRadius="10dp" />
+
+                <Button
+                    android:id="@+id/btnReboot"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Reboot"
+                    android:backgroundTint="#DA3633"
+                    android:textColor="#FFFFFF"
+                    app:cornerRadius="10dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Bahagian Log Bawah (Kecil untuk rujukan) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sistem Log:"
+            android:textColor="#6E7681"
+            android:textSize="11sp"
+            android:layout_marginBottom="4dp" />
 
         <TextView
             android:id="@+id/tvLogs"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Sedia untuk menyambung..."
-            android:textColor="#00FF66"
+            android:layout_height="80dp"
+            android:background="#05070A"
+            android:padding="8dp"
+            android:textColor="#3FB950"
             android:fontFamily="monospace"
-            android:textSize="12sp" />
-    </ScrollView>
+            android:textSize="10sp"
+            android:scrollbars="vertical"
+            android:text="Sedia." />
 
-</LinearLayout>
+    </LinearLayout>
+</ScrollView>
