@@ -1,5 +1,7 @@
 package com.muz.ztemodem.data
 
+import java.util.Locale
+
 // Status sambungan rangkaian dashboard
 enum class ModemConnectionState {
     LIVE,
@@ -22,7 +24,6 @@ data class SignalDiagnostics(
     val wanIp: String = "-"
 )
 
-
 // Model statistik penggunaan data
 data class TrafficStats(
     val monthlyTotalBytes: Long = 0L,
@@ -33,9 +34,9 @@ data class TrafficStats(
     fun formatBytes(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
         return if (mb >= 1024.0) {
-            String.format("%.2f GB", mb / 1024.0)
+            String.format(Locale.US, "%.2f GB", mb / 1024.0)
         } else {
-            String.format("%.1f MB", mb)
+            String.format(Locale.US, "%.1f MB", mb)
         }
     }
 
@@ -43,7 +44,7 @@ data class TrafficStats(
         val hours = connectedTimeSeconds / 3600
         val minutes = (connectedTimeSeconds % 3600) / 60
         val seconds = connectedTimeSeconds % 60
-        return String.format("%02dj %02dm %02ds", hours, minutes, seconds)
+        return String.format(Locale.US, "%02dj %02dm %02ds", hours, minutes, seconds)
     }
 }
 
@@ -55,9 +56,9 @@ data class LiveSpeed(
     fun formatSpeed(bytesPerSec: Long): String {
         val kb = bytesPerSec / 1024.0
         return if (kb >= 1024.0) {
-            String.format("%.2f MB/s", kb / 1024.0)
+            String.format(Locale.US, "%.2f MB/s", kb / 1024.0)
         } else {
-            String.format("%.1f KB/s", kb)
+            String.format(Locale.US, "%.1f KB/s", kb)
         }
     }
 }
