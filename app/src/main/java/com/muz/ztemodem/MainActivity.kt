@@ -13,6 +13,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -75,10 +76,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvChargingNote: TextView
     private lateinit var tvModemTemp: TextView
 
-    // Data Switch
+    // Data Switch & Repair
     private lateinit var btnDataOn: Button
     private lateinit var btnDataOff: Button
     private lateinit var btnResetIp: Button
+    private lateinit var btnRepairNetwork: Button
 
     // Traffic Views
     private lateinit var tvMonthlyData: TextView
@@ -141,6 +143,7 @@ class MainActivity : AppCompatActivity() {
         btnDataOn = findViewById(R.id.btnDataOn)
         btnDataOff = findViewById(R.id.btnDataOff)
         btnResetIp = findViewById(R.id.btnResetIp)
+        btnRepairNetwork = findViewById(R.id.btnRepairNetwork)
 
         tvMonthlyData = findViewById(R.id.tvMonthlyData)
         tvLiveTraffic = findViewById(R.id.tvLiveTraffic)
@@ -167,6 +170,27 @@ class MainActivity : AppCompatActivity() {
 
         btnRefresh.setOnClickListener {
             refreshAllData(isAuto = false)
+        }
+
+        // Tombol 1-Click Network Repair
+        btnRepairNetwork.setOnClickListener {
+            lifecycleScope.launch {
+                log("Memulakan proses 1-Click Network Repair...")
+                Toast.makeText(this@MainActivity, "Sedang memulihkan modem, sila tunggu sebentar...", Toast.LENGTH_SHORT).show()
+                btnRepairNetwork.isEnabled = false
+
+                val success = api.repairNetworkStack()
+                btnRepairNetwork.isEnabled = true
+                if (success) {
+                    log(">> Rangkaian berjaya dipulihkan ke CelcomDigi!")
+                    Toast.makeText(this@MainActivity, "Talian berjaya dipulihkan ke CelcomDigi Auto!", Toast.LENGTH_LONG).show()
+                    delay(2000)
+                    refreshAllData(isAuto = false)
+                } else {
+                    log(">> Gagal menghantar arahan pemulihan.")
+                    Toast.makeText(this@MainActivity, "Gagal menghubungi modem.", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         // Kunci Band LTE Spesifik
@@ -412,7 +436,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-        private fun showBandLockDialog() {
+    private fun showBandLockDialog() {
         val bands = arrayOf(
             "Semua Band (Auto Default)",
             "Band 3 (1800 MHz - CelcomDigi Utama)",
@@ -433,7 +457,6 @@ class MainActivity : AppCompatActivity() {
                     val ok = api.lockLteBand(selectedCode)
 
                     if (ok) {
-                        // Notifikasi Toast timbul di skrin
                         Toast.makeText(
                             this@MainActivity,
                             "BUKTI: Berjaya kunci ke $selectedName!",
@@ -456,7 +479,6 @@ class MainActivity : AppCompatActivity() {
             .setNegativeButton("Batal", null)
             .show()
     }
-
 
     private fun triggerLoginProcess(ip: String, pass: String) {
         api.gatewayIp = ip
@@ -581,13 +603,9 @@ class MainActivity : AppCompatActivity() {
                 tvWanIp.text = "WAN: -"
                 tvDlSpeed.text = "0.0 KB/s"
                 tvUlSpeed.text = "0.0 KB/s"
-                            // Bukti visual: Kalau ada band dikesan, paparkan "LTE (B3)" atau "LTE (B8)"
-            if (sig.networkType.equals("LTE", ignoreCase = true) && sig.lteBand.isNotBlank()) {
-                tvNetworkType.text = "LTE (B${sig.lteBand})"
-            } else {
-                tvNetworkType.text = sig.networkType
+                if (!isAuto) log("Peringatan: Sambungan ke gateway modem terputus.")
+                return@launch
             }
-
 
             val hasNoCellular = sig.signalBar == 0 ||
                     sig.provider.contains("Tiada", ignoreCase = true) ||
@@ -601,8 +619,14 @@ class MainActivity : AppCompatActivity() {
             } else {
                 updateSyncStatusUI(ModemConnectionState.LIVE)
                 tvTelcoName.text = sig.provider
-                tvNetworkType.text = sig.networkType
                 pbSignal.progressTintList = ColorStateList.valueOf(Color.parseColor("#3FB950"))
+
+                // Tampilkan label LTE beserta nomor band aktif jika tersedia
+                if (sig.networkType.equals("LTE", ignoreCase = true) && sig.lteBand.isNotBlank()) {
+                    tvNetworkType.text = "LTE (B${sig.lteBand})"
+                } else {
+                    tvNetworkType.text = sig.networkType
+                }
             }
 
             pbSignal.progress = sig.signalBar
@@ -613,7 +637,7 @@ class MainActivity : AppCompatActivity() {
             tvCellId.text = "Cell ID: ${sig.cellId}"
             tvWanIp.text = "WAN: ${sig.wanIp}"
 
-            // Tarik kuota & hitung kelajuan speedometer live
+            // Hitung kecepatan unduh dan unggah seketika
             val traffic = api.getTrafficStats()
             val currentTime = System.currentTimeMillis()
             if (lastSpeedCalcTime > 0L) {
@@ -638,7 +662,7 @@ class MainActivity : AppCompatActivity() {
             tvLiveTraffic.text = "Sesi ini: DL ${traffic.formatBytes(traffic.realtimeRxBytes)} | UL ${traffic.formatBytes(traffic.realtimeTxBytes)}"
             tvUpTime.text = "Masa: ${traffic.formatDuration()}"
 
-            // Tarik suhu & info bateri
+            // Tarik suhu dan persentase baterai
             val battery = api.getBatteryHealth()
             tvBatteryState.text = "Bateri: ${battery.percent}"
             tvChargingNote.text = if (battery.isCharging) "Sedang Dicas (Charging)" else "Guna Bateri"
