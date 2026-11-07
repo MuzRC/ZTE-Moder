@@ -8,6 +8,7 @@ import com.muz.ztemodem.data.SignalDiagnostics
 import com.muz.ztemodem.data.SmsMessage
 import com.muz.ztemodem.data.TrafficStats
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -97,7 +98,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 2. DIAGNOSTIK SINYAL RF LENGKAP
+    // 2. DIAGNOSTIK SIGNAL RF LENGKAP BERSAMA PENGESAHAN BAND LTE
     suspend fun getSignalDiagnostics(): SignalDiagnostics {
         val query = "isTest=false&cmd=network_type,signalbar,network_provider,lte_band,lte_rsrp,lte_rsrq,lte_rssi,lte_snr,cell_id,wan_ipaddr"
         val raw = sendGet(query)
@@ -107,12 +108,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return try {
             val j = JSONObject(raw)
 
-            // Bersihkan nama operator dari karakter rusak
+            // Bersihkan nama telco dari simbol rosak
             val rawProvider = j.optString("network_provider", "Tiada Rangkaian")
             val cleanProvider = rawProvider.replace(Regex("[^A-Za-z0-9 _-]"), "").trim()
             val finalProvider = if (cleanProvider.isNotBlank()) cleanProvider else "CelcomDigi"
 
-            // Ekstrak angka band LTE
+            // Ekstrak angka band LTE aktif (cth: "3", "7", "8")
             val rawBand = j.optString("lte_band", "").replace(Regex("[^0-9]"), "").trim()
 
             SignalDiagnostics(
@@ -156,7 +157,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 4. PEMANTAU SUHU & KESEHATAN BATERAI
+    // 4. PEMANTAU SUHU & BATERI
     suspend fun getBatteryHealth(): BatteryHealth {
         val query = "isTest=false&cmd=battery_charging,battery_vol_percent,battery_value,battery_temp"
         val raw = sendGet(query)
@@ -185,19 +186,42 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 5. KUNCI BAND LTE SPESIFIK
-    suspend fun lockLteBand(bandKey: String): Boolean {
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "SET_LTE_BAND_LOCK")
-            .add("lte_band_lock", bandKey)
-            .build()
+    // 5. KUNCI BAND LTE (DILENGKAPI PERISAI AUTO-DISCONNECT)
+    suspend fun lockLteBand(bandKey: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // Langkah 1: Putuskan data sementara supaya modem terima arahan
+            val disconnectBody = FormBody.Builder()
+                .add("isTest", "false")
+                .add("goformId", "DISCONNECT_NETWORK")
+                .build()
+            sendPost(disconnectBody)
+            delay(1200)
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+            // Langkah 2: Hantar kod kunci band
+            val body = FormBody.Builder()
+                .add("isTest", "false")
+                .add("goformId", "SET_LTE_BAND_LOCK")
+                .add("lte_band_lock", bandKey)
+                .build()
+            val res = sendPost(body)
+            val success = res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+            delay(1000)
+
+            // Langkah 3: Sambung semula sambungan internet secara automatik
+            val connectBody = FormBody.Builder()
+                .add("isTest", "false")
+                .add("goformId", "CONNECT_NETWORK")
+                .build()
+            sendPost(connectBody)
+            delay(1500)
+
+            success
+        } catch (e: Exception) {
+            false
+        }
     }
 
-    // 6. SAKELAR DATA SELULER
+    // 6. SUIS DATA SELULAR
     suspend fun setMobileDataState(connect: Boolean): Boolean {
         val cmd = if (connect) "CONNECT_NETWORK" else "DISCONNECT_NETWORK"
         val body = FormBody.Builder()
@@ -209,19 +233,42 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 7. KUNCI MODE JARINGAN (4G ONLY / AUTO)
-    suspend fun setNetworkMode(mode: String): Boolean {
-        val body = FormBody.Builder()
-            .add("isTest", "false")
-            .add("goformId", "SET_BEARER_PREFERENCE")
-            .add("BearerPreference", mode)
-            .build()
+    // 7. KUNCI MOD RANGKAIAN (DILENGKAPI PERISAI AUTO-DISCONNECT)
+    suspend fun setNetworkMode(mode: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // Langkah 1: Putuskan data dahulu
+            val disconnectBody = FormBody.Builder()
+                .add("isTest", "false")
+                .add("goformId", "DISCONNECT_NETWORK")
+                .build()
+            sendPost(disconnectBody)
+            delay(1200)
 
-        val res = sendPost(body)
-        return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+            // Langkah 2: Ubah mod rangkaian (cth: Only_LTE atau NETWORK_auto)
+            val body = FormBody.Builder()
+                .add("isTest", "false")
+                .add("goformId", "SET_BEARER_PREFERENCE")
+                .add("BearerPreference", mode)
+                .build()
+            val res = sendPost(body)
+            val success = res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
+            delay(1000)
+
+            // Langkah 3: Sambung semula data
+            val connectBody = FormBody.Builder()
+                .add("isTest", "false")
+                .add("goformId", "CONNECT_NETWORK")
+                .build()
+            sendPost(connectBody)
+            delay(1500)
+
+            success
+        } catch (e: Exception) {
+            false
+        }
     }
 
-    // 8. DAFTAR PERANGKAT TERHUBUNG
+    // 8. SENARAI PERANTI BERSAMBUNG
     suspend fun getConnectedClients(): List<ConnectedClient> {
         val query = "isTest=false&cmd=station_list"
         val raw = sendGet(query)
@@ -240,12 +287,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // Abaikan kesalahan parsing
+            // Abaikan parsing error
         }
         return list
     }
 
-    // 9. KOTAK MASUK SMS
+    // 9. PETI MASUK SMS
     suspend fun getSmsMessages(): List<SmsMessage> {
         val query = "isTest=false&cmd=sms_data_total,sms_page_data&page=0&data_per_page=10&mem_store=1&tags=10"
         val raw = sendGet(query)
@@ -266,12 +313,12 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 )
             }
         } catch (e: Exception) {
-            // Abaikan kesalahan parsing
+            // Abaikan parsing error
         }
         return list
     }
 
-    // 10. KIRIM SMS
+    // 10. HANTAR SMS
     suspend fun sendSms(recipient: String, messageText: String): Boolean {
         val timeStamp = SimpleDateFormat("yy;MM;dd;HH;mm;ss;+32", Locale.US).format(Date())
         val encodedMsg = encodeUcs2(messageText)
@@ -290,7 +337,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 11. PENGATURAN WI-FI
+    // 11. TETAPAN WI-FI
     suspend fun updateWifiConfig(newSsid: String, newKey: String): Boolean {
         val body = FormBody.Builder()
             .add("isTest", "false")
@@ -307,7 +354,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         return res.contains("\"result\":\"0\"") || res.contains("\"result\":0")
     }
 
-    // 12. PANGGILAN USSD
+    // 12. DAIL KOD USSD
     suspend fun sendUssd(code: String): String {
         val encodedCode = URLEncoder.encode(code, "UTF-8")
         val body = FormBody.Builder()
@@ -318,7 +365,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
             .build()
 
         sendPost(body)
-        kotlinx.coroutines.delay(3500)
+        delay(3500)
         val query = "isTest=false&cmd=ussd_data,ussd_process"
         val res = sendGet(query)
         return try {
@@ -330,7 +377,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 13. PING SOKET
+    // 13. UJIAN PING LATENCY
     suspend fun pingHost(host: String = "8.8.8.8", port: Int = 53): PingResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         var reachable = false
@@ -346,7 +393,7 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         PingResult(host, if (reachable) latency else -1L, reachable)
     }
 
-    // 14. REBOOT PERANGKAT
+    // 14. REBOOT MODEM
     suspend fun reboot(): Boolean {
         val body = FormBody.Builder()
             .add("isTest", "false")
@@ -361,45 +408,45 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
         }
     }
 
-    // 15. 1-CLICK NETWORK REPAIR (PEMULIHAN JARINGAN OTOMATIS)
+    // 15. 1-CLICK NETWORK REPAIR (PEMULIHAN AUTOMATIK RANGKAIAN CELCOMDIGI)
     suspend fun repairNetworkStack(): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Tahap 1: Putuskan sesi data aktif
+            // Langkah 1: Putuskan sesi data
             val disconnectBody = FormBody.Builder()
                 .add("isTest", "false")
                 .add("goformId", "DISCONNECT_NETWORK")
                 .build()
             sendPost(disconnectBody)
-            kotlinx.coroutines.delay(1500)
+            delay(1500)
 
-            // Tahap 2: Lepas kunci band (kembalikan ke Auto / 0)
+            // Langkah 2: Lepaskan kunci band (kembali ke Auto / Band 0)
             val unlockBandBody = FormBody.Builder()
                 .add("isTest", "false")
                 .add("goformId", "SET_LTE_BAND_LOCK")
                 .add("lte_band_lock", "0")
                 .build()
             sendPost(unlockBandBody)
-            kotlinx.coroutines.delay(1000)
+            delay(1000)
 
-            // Tahap 3: Kembalikan preferensi jaringan ke Automatic
+            // Langkah 3: Kembalikan mod rangkaian ke Automatic
             val autoNetBody = FormBody.Builder()
                 .add("isTest", "false")
                 .add("goformId", "SET_BEARER_PREFERENCE")
                 .add("BearerPreference", "NETWORK_auto")
                 .build()
             sendPost(autoNetBody)
-            kotlinx.coroutines.delay(1000)
+            delay(1000)
 
-            // Tahap 4: Aktifkan Data Roaming (wajib untuk MOCN CelcomDigi)
+            // Langkah 4: Hidupkan Data Roaming (wajib untuk MOCN CelcomDigi)
             val roamingBody = FormBody.Builder()
                 .add("isTest", "false")
                 .add("goformId", "SET_ROAMING_STATE")
                 .add("roaming_state", "1")
                 .build()
             sendPost(roamingBody)
-            kotlinx.coroutines.delay(1000)
+            delay(1000)
 
-            // Tahap 5: Tetapkan APN diginet sebagai profil utama
+            // Langkah 5: Pasang APN diginet rasmi
             val apnBody = FormBody.Builder()
                 .add("isTest", "false")
                 .add("goformId", "APN_PROC_EX")
@@ -410,15 +457,15 @@ class ZteApiClient(var gatewayIp: String = "192.168.0.1") {
                 .add("pdp_type", "IP")
                 .build()
             sendPost(apnBody)
-            kotlinx.coroutines.delay(1500)
+            delay(1500)
 
-            // Tahap 6: Sambungkan kembali sambungan data seluler
+            // Langkah 6: Sambungkan semula data selular
             val connectBody = FormBody.Builder()
                 .add("isTest", "false")
                 .add("goformId", "CONNECT_NETWORK")
                 .build()
             sendPost(connectBody)
-            kotlinx.coroutines.delay(2000)
+            delay(2000)
 
             true
         } catch (e: Exception) {
