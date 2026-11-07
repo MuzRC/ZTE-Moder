@@ -231,7 +231,7 @@
                         <TextView android:id="@+id/tvRsrp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSRP: -- dBm" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
                         <TextView android:id="@+id/tvRsrq" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSRQ: -- dB" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
                         <TextView android:id="@+id/tvRssi" android:layout_width="0dp" android:layout_columnWeight="1" android:text="RSSI: -- dBm" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
-                        <TextView android:id="@+id/tvSinr" android:layout_width="0dp" android:layout_columnWeight="1" android:text="SINR: -- dB" android:textColor="#8B949E" android:textSize="12sp" android:layout_marginBottom="4dp"/>
+                        <TextView android:id="@+id/tvSinr" android:layout_width="0dp" android:layout_columnWeight="1" android:text="SINR: -- dB" android:textSize="12sp" android:layout_marginBottom="4dp"/>
                         <TextView android:id="@+id/tvCellId" android:layout_width="0dp" android:layout_columnWeight="1" android:text="Cell ID: --" android:textColor="#58A6FF" android:textSize="12sp"/>
                         <TextView android:id="@+id/tvWanIp" android:layout_width="0dp" android:layout_columnWeight="1" android:text="WAN: --" android:textColor="#8B949E" android:textSize="12sp"/>
                     </GridLayout>
@@ -449,6 +449,19 @@
                             android:backgroundTint="#1F6FEB"
                             app:cornerRadius="8dp" />
                     </LinearLayout>
+
+                    <!-- Tombol 1-Click Network Repair -->
+                    <Button
+                        android:id="@+id/btnRepairNetwork"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginTop="10dp"
+                        android:text="Baiki Talian (1-Click Repair)"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:backgroundTint="#D29922"
+                        android:textColor="#FFFFFF"
+                        app:cornerRadius="8dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
